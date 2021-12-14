@@ -108,17 +108,15 @@ def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifie
     if rules["LIMITED_COMMUNICATIONS"]:
         agents = []
         for actor in world.get_all_actors():
-            new_agent = agent_class()
-            new_agent.api = AgentAPI(world, [actor.id])
-            new_agent.world_info = new_agent.api.get_world_info()
+            api = AgentAPI(world, [actor.id])
+            new_agent = agent_class(api, api.get_world_info())
             agents.append(new_agent)
     else:
-        agents = [agent_class()]
         actor_ids = []
         for actor in world.get_all_actors():
             actor_ids.append(actor.id)
-        agents[0].api = AgentAPI(world, actor_ids)
-        agents[0].world_info = agents[0].api.get_world_info()
+        api = AgentAPI(world, actor_ids)
+        agents = [agent_class(api, api.get_world_info())]
 
     if rules["RT_OR_LOCK_STEP"] == 0:
         global simulation_stop
