@@ -512,8 +512,8 @@ class World:
     def add_mine(self, node, colour):
         return Mine(self, node, colour)
 
-    def add_site(self, node, building_type):
-        return Site(self, node, building_type)
+    def add_site(self, node, building_type, target_task=None):
+        return Site(self, node, building_type, target_task)
 
     def add_building(self, node, building_type):
         return Building(self, node, building_type)

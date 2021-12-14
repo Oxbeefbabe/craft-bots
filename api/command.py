@@ -99,6 +99,16 @@ class Command:
                 return self.result
             self.set_state(Command.REJECTED)
             return False
+        elif self.function_id == Command.START_SITE and self.args.__len__() == 3:
+            self.set_state(Command.ACTIVE)
+            actor = self.world.get_by_id(self.args[0], entity_type="Actor")
+            target_task = self.world.get_by_id(self.args[2], entity_type="Task")
+            if actor is not None:
+                self.set_result(actor.start_site(self.args[1], target_task))
+                self.set_state(Command.COMPLETED)
+                return self.result
+            self.set_state(Command.REJECTED)
+            return False
         elif self.function_id == Command.CONSTRUCT_AT and self.args.__len__() == 2:
             self.set_state(Command.ACTIVE)
             actor = self.world.get_by_id(self.args[0], entity_type="Actor")

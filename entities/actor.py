@@ -192,7 +192,7 @@ class Actor:
             return True
         return False
 
-    def start_site(self, colour):
+    def start_site(self, colour, target_task=None):
         """
         Has the actor create a new "construction" site to create a building. Site is created in the same node as the
         actor. Actor must be idle to do this.
@@ -205,7 +205,7 @@ class Actor:
                     self.world.modifiers["SITE_CREATION_FAIL_CHANCE"]:
                 print("Site Creation failed")
                 return False
-            self.world.add_site(self.node, colour)
+            self.world.add_site(self.node, colour, target_task=target_task)
             return True
         return False
 

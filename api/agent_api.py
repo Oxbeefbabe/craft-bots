@@ -117,7 +117,7 @@ class AgentAPI:
         """
         return self.__send_command(Command.DIG_AT, actor_id, mine_id)
 
-    def start_site(self, actor_id, site_type):
+    def start_site(self, actor_id, site_type, target_task=None):
         """
         Tell an actor to start a site of the specified type. A site will be placed on the node that the actor is at.
 
@@ -128,7 +128,10 @@ class AgentAPI:
         :param site_type: The type of site to be built (see Building.BUILDING_[TYPE])
         :return: The ID of the command or -1 if the max command limit has been reached or API does not have access to the actor
         """
-        return self.__send_command(Command.START_SITE, actor_id, site_type)
+        if target_task:
+            return self.__send_command(Command.START_SITE, actor_id, site_type, target_task)
+        else:
+            return self.__send_command(Command.START_SITE, actor_id, site_type)
 
     def construct_at(self, actor_id, site_id):
         """
