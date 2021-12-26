@@ -35,6 +35,7 @@ class Resource:
         if self.colour == 4 and self.world.tick - self.tick_created >= self.world.modifiers["GREEN_DECAY_TIME"]:
             self.set_used(True)
             self.location.remove_resource(self)
+            self.world.resources.remove(self)
 
     def set_location(self, location):
         """

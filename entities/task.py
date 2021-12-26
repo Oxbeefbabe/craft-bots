@@ -29,7 +29,7 @@ class Task:
                        "needed_resources": self.needed_resources, "project": self.project, "deadline": self.deadline}
 
     def __repr__(self):
-        return "Task(" + str(self.node) + ", " + str(self.needed_resources) + ")"
+        return f"Task({self.id}, {self.node}, {self.project}, {self.needed_resources})"
 
     def __str__(self):
         return "Task to build at " + str(self.node) + " with the resource requirements of " + str(self.needed_resources)
@@ -141,7 +141,7 @@ class Task:
             sum_of_res = sum(self.needed_resources) * self.world.modifiers["RESOURCE_COMP_MODIFIER"]
             mining_compensation = sum_of_res * self.world.modifiers["MINE_EFFORT"]
             travel_compensation = sum_of_res * self.world.world_gen_modifiers["CAST_DISTANCE"] * \
-                                  self.world.get_all_edges().__len__() * 0.2 / self.world.modifiers["ACTOR_MOVE_SPEED"]
+                                  self.world.edges.__len__() * 0.2 / self.world.modifiers["ACTOR_MOVE_SPEED"]
             construction_compensation = sum_of_res * self.world.modifiers["BUILD_EFFORT"]
 
             mining_compensation *= self.world.modifiers["MINING_COMP_MODIFIER"]

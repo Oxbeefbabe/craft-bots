@@ -33,12 +33,20 @@ class World:
                 Building.BUILDING_CONSTRUCTION: 0
             }
 
-            self.nodes = []
             self.tick = 0
             self.last_id = -1
             self.command_queue = []
-            self.all_commands = []
             self.total_score = 0
+
+            self.actors = []
+            self.buildings = []
+            self.edges = []
+            self.mines = []
+            self.nodes = []
+            self.resources = []
+            self.sites = []
+            self.tasks = []
+            self.commands = []
 
             self.create_nodes_prm()
             self.tasks = self.generate_tasks()
@@ -69,7 +77,7 @@ class World:
                     new_edges = []
                     for node in self.nodes:
                         if m.dist((new_x, new_y), (node.x, node.y)) <= self.world_gen_modifiers["CONNECT_DISTANCE"]:
-                            new_edges.append(Edge(self, new_node, node))
+                            new_edges.append(self.add_edge(node, new_node))
                             no_new_edges = False
                     if not no_new_edges:
                         self.nodes.append(new_node)
@@ -81,7 +89,7 @@ class World:
 
     def get_world_info(self, target_actors=None):
         if target_actors is None:
-            actors = self.get_all_actors()
+            actors = self.actors
         else:
             actors = []
             for actor_index in range(target_actors.__len__()):
@@ -162,7 +170,7 @@ class World:
                             nodes_info.get(node.id)["tasks"].append(task_id)
 
         commands_info = {}
-        for command in self.all_commands:
+        for command in self.commands:
             if actors_info.__contains__(command.args[0]):
                 commands_info.__setitem__(command.id, command.fields)
 
@@ -205,7 +213,7 @@ class World:
                                 actor_info.__setitem__(actor_at_node.id, actor_at_node.fields)
                                 actor_info.get(actor_at_node.id).__setitem__("observers", [actor.id])
         else:
-            for actor in self.get_all_actors():
+            for actor in self.actors:
                 actor_info.__setitem__(actor.id, actor.fields)
         return actor_info
 
@@ -285,7 +293,7 @@ class World:
                                 buildings.__setitem__(building.id, building.fields)
                                 buildings.get(building.id).__setitem__("observers", [actor.id])
         else:
-            for building in self.get_all_buildings():
+            for building in self.buildings:
                 buildings.__setitem__(building.id, building.fields)
         return buildings
 
@@ -325,7 +333,7 @@ class World:
                                 sites.__setitem__(site.id, site.fields)
                                 sites.get(site.id).__setitem__("observers", [actor.id])
         else:
-            for site in self.get_all_sites():
+            for site in self.sites:
                 sites.__setitem__(site.id, site.fields)
         return sites
 
@@ -365,7 +373,7 @@ class World:
                                 mines.__setitem__(mine.id, mine.fields)
                                 mines.get(mine.id).__setitem__("observers", [actor.id])
         else:
-            for mine in self.get_all_mines():
+            for mine in self.mines:
                 mines.__setitem__(mine.id, mine.fields)
         return mines
 
@@ -419,7 +427,7 @@ class World:
                                     resources.__setitem__(resource.id, resource.fields)
                                     resources.get(resource.id).__setitem__("observers", [actor.id])
         else:
-            for resource in self.get_all_resources():
+            for resource in self.resources:
                 resources.__setitem__(resource.id, resource.fields)
         return resources
 
@@ -461,7 +469,7 @@ class World:
                                 edges.__setitem__(edge.id, edge.fields)
                                 edges.get(edge.id).__setitem__("observers", [actor.id])
         else:
-            for edge in self.get_all_edges():
+            for edge in self.edges:
                 edges.__setitem__(edge.id, edge.fields)
         return edges
 
@@ -475,20 +483,34 @@ class World:
             if r.random() < self.modifiers["NEW_TASK_CHANCE"]:
                 self.tasks.append(Task(self))
         self.tick += 1
+        """
+        if self.tick % 100 == 0:
+            print(f"Actors: {self.actors}\n"
+                  f"Buildings: {self.buildings}\n"
+                  f"Edges: {self.edges}\n"
+                  f"Mines: {self.mines}\n"
+                  f"Nodes: {self.nodes}\n"
+                  f"Resources: {self.resources}\n"
+                  f"Sites: {self.sites}\n"
+                  f"Tasks: {self.tasks}\n"
+                  f"Commands: {self.commands}\n")
+                  """
 
     def run_agent_commands(self):
         if self.command_queue:
-            self.all_commands.extend(self.command_queue)
+            for command in self.command_queue:
+                if command.save:
+                    self.commands.append(command)
             for command in self.command_queue:
                 command.perform()
             self.command_queue = []
 
     def update_all_actors(self):
-        for actor in self.get_all_actors():
+        for actor in self.actors:
             actor.update()
             
     def update_all_resources(self):
-        for resource in self.get_all_resources():
+        for resource in self.resources:
             resource.update()
 
     def tasks_complete(self):
@@ -504,19 +526,28 @@ class World:
         return tasks
 
     def add_actor(self, node):
-        return Actor(self, node)
+        self.actors.append(Actor(self, node))
+        return self.actors[-1]
 
     def add_resource(self, location, colour):
-        return Resource(self, location, colour)
+        self.resources.append(Resource(self, location, colour))
+        return self.resources[-1]
 
     def add_mine(self, node, colour):
-        return Mine(self, node, colour)
+        self.mines.append(Mine(self, node, colour))
+        return self.mines[-1]
 
     def add_site(self, node, building_type, target_task=None):
-        return Site(self, node, building_type, target_task)
+        self.sites.append(Site(self, node, building_type, target_task))
+        return self.sites[-1]
 
     def add_building(self, node, building_type):
-        return Building(self, node, building_type)
+        self.buildings.append(Building(self, node, building_type))
+        return self.buildings[-1]
+
+    def add_edge(self, node_a, node_b):
+        self.edges.append(Edge(self, node_a, node_b))
+        return self.edges[-1]
 
     def get_colour_string(self, colour):
         if colour == 0:
@@ -531,45 +562,6 @@ class World:
             return "green"
         elif colour == 5:
             return "purple"
-
-    def get_all_mines(self):
-        mines = []
-        for node in self.nodes:
-            mines.extend(node.mines)
-        return mines
-    
-    def get_all_actors(self):
-        actors = []
-        for node in self.nodes:
-            actors.extend(node.actors)
-        return actors
-
-    def get_all_actor_ids(self):
-        actor_ids = []
-        for node in self.nodes:
-            for actor in node.actors:
-                actor_ids.append(actor.id)
-        return actor_ids
-    
-    def get_all_resources(self):
-        resources = []
-        for node in self.nodes:
-            resources.extend(node.resources)
-        for actor in self.get_all_actors():
-            resources.extend(actor.resources)
-        return resources
-    
-    def get_all_sites(self):
-        sites = []
-        for node in self.nodes:
-            sites.extend(node.sites)
-        return sites
-    
-    def get_all_buildings(self):
-        buildings = []
-        for node in self.nodes:
-            buildings.extend(node.buildings)
-        return buildings
 
     def get_all_edges(self):
         edges = []
@@ -598,7 +590,7 @@ class World:
             target_node = [target_node]
 
         if entity_type == "Command" or entity_type is None:
-            for command in self.all_commands:
+            for command in self.commands:
                 if command.id == entity_id:
                     return command
         for node in target_node:
