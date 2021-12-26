@@ -1,3 +1,5 @@
+import sys
+
 from craftbots.world import World
 from api.agent_api import AgentAPI
 from agents.blank_agent import BlankAgent
@@ -18,6 +20,7 @@ gui_updating = False
 root = None
 world = World()
 start_time = time.time()
+ticks_run_this_second = 0
 
 
 def default_scenario(modifiers, world_gen_modifiers):
@@ -90,10 +93,14 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
         :param rule_file: (optional) path to the text file that is used to set the rules for the simulation.  Default: None (the default parameters are used)
         :return:
         """
+    global ticks_run_this_second
     sim_thread = threading.Thread(target=prep_simulation, args=(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
     sim_thread.start()
     while not sim_stopped:
         time.sleep(1)
+        sys.stdout.write(f"\rTick rate: {ticks_run_this_second}")
+        sys.stdout.flush()
+        ticks_run_this_second = 0
     return world.total_score
 
 
@@ -107,13 +114,13 @@ def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifie
 
     if rules["LIMITED_COMMUNICATIONS"]:
         agents = []
-        for actor in world.get_all_actors():
+        for actor in world.actors:
             api = AgentAPI(world, [actor.id])
             new_agent = agent_class(api, api.get_world_info())
             agents.append(new_agent)
     else:
         actor_ids = []
-        for actor in world.get_all_actors():
+        for actor in world.actors:
             actor_ids.append(actor.id)
         api = AgentAPI(world, actor_ids)
         agents = [agent_class(api, api.get_world_info())]
@@ -139,7 +146,7 @@ def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifie
 
 
 def lock_step_sim(agents, update_model):
-    global world
+    global world, ticks_run_this_second
     while not sim_stopped:
         for agent in agents:
             agent.world_info = agent.api.get_world_info()
@@ -148,9 +155,14 @@ def lock_step_sim(agents, update_model):
 
         time.sleep(1 / world.rules["LOCK_STEP_RATE"])
         world.run_tick()
+        ticks_run_this_second += 1
 
         for agent in agents:
             agent.api.num_of_current_commands = 0
+
+
+        if world.world_gen_modifiers["REFRESH_TASKS"] == 0 and world.modifiers["NEW_TASK_CHANCE"] == 0 and world.tasks_complete():
+            return on_close()
 
         if world.rules["TIME_LENGTH_TYPE"] == 0:
             if time.time() - world.rules["SIM_LENGTH"] >= start_time:
@@ -177,7 +189,7 @@ def refresh_gui(gui, tick_hz):
 
 
 def refresh_world(agents):
-    global world
+    global world, ticks_run_this_second
     for agent in agents:
         if not agent.thinking:
             agent.thinking = True
@@ -185,6 +197,7 @@ def refresh_world(agents):
             agent_thread = threading.Thread(target=agent.get_next_commands)
             agent_thread.start()
     world.run_tick()
+    ticks_run_this_second += 1
     for agent in agents:
         agent.api.num_of_current_commands = 0
     if world.rules["TIME_LENGTH_TYPE"] == 0:
@@ -219,7 +232,7 @@ def init_gui():
 
 def on_close():
     global world
-    print("Simulation time up")
+    print("\nSimulation time up")
     global sim_stopped, simulation_stop
     if simulation_stop is not None:
         simulation_stop()
