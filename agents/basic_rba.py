@@ -100,7 +100,6 @@ class Actor_Info:
 
 
     def execute_command(self, command):
-        print(command)
         command[0](*command[1])
 
     def pop(self):
@@ -149,7 +148,7 @@ class Actor_Info:
         self.go_to(task_node, current_node)
         current_node = task_node
 
-        self.push(self.api.start_site, 5 , self.task)
+        self.push(self.api.start_site, 0 , self.task)
         self.push(self.finish_off_site, include_actor=False)
 
     def pick_up_resource_of(self, colour):
@@ -162,8 +161,9 @@ class Actor_Info:
         #deposits all resources in inventory into a site and starts construction
         if self.api.get_field(self.id, "node") == self.api.get_field(self.task, "node"):
             site = self.api.get_field(self.task, "project")
-            print(self.api.get_by_id(self.task))
+            # print(self.api.get_by_id(self.task))
             self.push(self.api.construct_at, site)
+            resources = self.api.get_field(self.id, "resources")
             for resource in self.api.get_field(self.id, "resources"):
                 self.push(self.api.deposit_resources, site, resource, to_front=True)
 
