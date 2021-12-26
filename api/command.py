@@ -19,7 +19,7 @@ class Command:
     REJECTED = 2
     COMPLETED = 3
 
-    def __init__(self, world, function_id, *args):
+    def __init__(self, world, function_id, save, *args):
         self.world = world
         self.id = self.world.get_new_id()
         self.world.command_queue.append(self)
@@ -27,10 +27,30 @@ class Command:
         self.args = args
         self.result = None
         self.state = Command.PENDING
+        self.save = save
 
         self.fields = {"id": self.id, "function_id": self.function_id, "args": self.args, "result": self.result,
                        "state": self.state}
 
+    def __str__(self):
+        command_names = {self.MOVE_TO : "move_to",
+    self.MOVE_RAND : "move_rand",
+    self.PICK_UP_RESOURCE : "pick_up_resource",
+    self.DROP_RESOURCE : "drop_resource",
+    self.DROP_ALL_RESOURCES : "drop_all_resources",
+    self.DIG_AT : "dig_at",
+    self.START_SITE : "start_site",
+    self.CONSTRUCT_AT : "construct_at",
+    self.DEPOSIT_RESOURCES : "deposit_resource",
+    self.CANCEL_ACTION : "cancel_action",
+    self.START_LOOKING : "start_looking",
+    self.START_SENDING : "start_sending",
+    self.START_RECEIVING : "start_receiving"}
+        return f" Command({command_names[self.function_id]}, {self.args})"
+    
+    def __repr__(self):
+        return self.__str__()
+    
     def perform(self):
         if self.function_id == Command.MOVE_TO and self.args.__len__() == 2:
             self.set_state(Command.ACTIVE)
