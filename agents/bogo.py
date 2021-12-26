@@ -13,10 +13,10 @@ https://en.wikipedia.org/wiki/Bogosort
 
 
 class Bogo:
-    def __init__(self):
-        self.api = None
+    def __init__(self, api, world_info):
+        self.api = api
         self.thinking = False
-        self.world_info = None
+        self.world_info = world_info
         self.orange_ticks = {}
 
     def get_next_commands(self):
