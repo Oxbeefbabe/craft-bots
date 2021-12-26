@@ -46,11 +46,11 @@ class GUI(tk.Frame):
 
         self.update_graph()
         self.actors = []
-        for actor in self.world.get_all_actors():
+        for actor in self.world.actors:
             self.draw_actor(actor.node.x, actor.node.y)
-            self.actors.append((actor, self.graph.find_all()[-1:][0]))
+            self.actors.append((actor, self.graph.find_all()[-1:][0], False))
         self.resources = []
-        for resource in self.world.get_all_resources():
+        for resource in self.world.resources:
             if isinstance(resource.location, Node):
                 node_x = resource.location.x + self.padding - self.centre_offset_x
                 node_y = resource.location.y + self.padding - self.centre_offset_y
@@ -66,20 +66,20 @@ class GUI(tk.Frame):
                                                                  self.world.get_colour_string(resource.colour)))
             self.resources.append((resource, self.graph.find_all()[-1:][0]))
         self.mines = []
-        for mine in self.world.get_all_mines():
+        for mine in self.world.mines:
             self.mines.append((mine, self.draw_mine(mine.node.x, mine.node.y, world.get_colour_string(mine.colour))))
         self.sites = []
-        for site in self.world.get_all_sites():
+        for site in self.world.sites:
             self.sites.append((site, self.draw_site(site.node.x, site.node.y, "purple")))
         self.buildings = []
-        for building in self.world.get_all_buildings():
+        for building in self.world.buildings:
             self.buildings.append((building, self.draw_building(building.node.x, building.node.y, "purple")))
         self.update_actors()
         self.graph.pack()
         self.pack()
 
     def update_graph(self):
-        for edge in self.world.get_all_edges():
+        for edge in self.world.edges:
             x1 = edge.node_a.x + self.padding - self.centre_offset_x
             y1 = edge.node_a.y + self.padding - self.centre_offset_y
             x2 = edge.node_b.x + self.padding - self.centre_offset_x
@@ -91,14 +91,16 @@ class GUI(tk.Frame):
             self.graph.create_oval(x - self.node_size, y - self.node_size, x + self.node_size, y + self.node_size, fill="white")
 
     def update_actors(self):
-        for actor in self.world.get_all_actors():
+        for actor in self.world.actors:
             accounted = False
-            for actor_pair in self.actors:
+            for index, actor_pair in enumerate(self.actors):
                 if actor_pair[0] == actor:
                     accounted = True
+                    self.actors[index] = (actor_pair[0], actor_pair[1], False)
             if not accounted:
                 self.draw_actor(actor.node.x, actor.node.y)
-                self.actors.append((actor, self.graph.find_all()[-1:][0]))
+                self.actors.append((actor, self.graph.find_all()[-1:][0], False))
+
         for actor_pair in self.actors:
             if actor_pair[0].state == 0:
                 dx = actor_pair[0].node.x + self.padding - self.centre_offset_x - 3 - self.graph.coords(actor_pair[1])[0]
@@ -114,20 +116,17 @@ class GUI(tk.Frame):
                 self.graph.move(actor_pair[1], dx, dy)
 
     def update_resources(self):
-        for resource_pair in self.resources:
-            if resource_pair[0].used:
-                self.graph.delete(resource_pair[1])
-                self.resources.remove(resource_pair)
-        for resource in self.world.get_all_resources():
+        for resource in self.world.resources:
             accounted = False
             for resource_pair in self.resources:
                 if resource_pair[0] == resource:
                     accounted = True
             if not accounted:
                 if isinstance(resource.location, Actor):
+
                     node_x = resource.location.node.x + self.padding - self.centre_offset_x
                     node_y = resource.location.node.y + self.padding - self.centre_offset_y
-                    self.draw_res_on_actor(resource.location,
+                    self.draw_res_on_actor(self.get_actor_pair_index(resource),
                                            self.draw_resource_sprite(node_x, node_y,
                                                                      self.world.get_colour_string(resource.colour)))
                 else:
@@ -141,7 +140,7 @@ class GUI(tk.Frame):
             if isinstance(resource_pair[0].location, Node):
                 self.draw_res_on_node(resource_pair[0].location, resource_pair[0], resource_pair[1])
             if isinstance(resource_pair[0].location, Actor):
-                self.draw_res_on_actor(resource_pair[0].location, resource_pair[1])
+                self.draw_res_on_actor(self.get_actor_pair_index(resource_pair[0]), resource_pair[1])
 
     def update_model(self):
         self.update_actors()
@@ -159,7 +158,7 @@ class GUI(tk.Frame):
             if site_pair[0].progress == 100:
                 self.graph.delete(site_pair[1])
                 self.sites.remove(site_pair)
-        for site in self.world.get_all_sites():
+        for site in self.world.sites:
             accounted = False
             for site_pair in self.sites:
                 if site_pair[0] == site:
@@ -171,7 +170,7 @@ class GUI(tk.Frame):
                 self.sites.append((site, self.graph.find_all()[-1:][0]))
     
     def update_buildings(self):
-        for building in self.world.get_all_buildings():
+        for building in self.world.buildings:
             accounted = False
             for building_pair in self.buildings:
                 if building_pair[0] == building:
@@ -181,6 +180,12 @@ class GUI(tk.Frame):
                 node_y = building.node.y
                 self.draw_building(node_x, node_y, "purple")
                 self.buildings.append((building, self.graph.find_all()[-1:][0]))
+
+    def get_actor_pair_index(self, resource):
+        for index, actor_pair in enumerate(self.actors):
+            if resource.location == actor_pair[0]:
+                return index
+        return -1
 
     def draw_resource_sprite(self, x, y, colour):
         return self.graph.create_polygon(x, y, x, y-1, x+1, y-1, x+1, y-2, x+2, y-2, x+2, y-4, x+2, y-2, x+3, y-2, x+3,
@@ -206,9 +211,15 @@ class GUI(tk.Frame):
             node_y -= 4
         self.move_sprite_to(sprite_id, node_x + self.padding - self.centre_offset_x, node_y + self.padding - self.centre_offset_y)
 
-    def draw_res_on_actor(self, actor, sprite_id):
-        coord = self.get_coord_of(actor)
-        self.move_sprite_to(sprite_id, coord[0], coord[1])
+    def draw_res_on_actor(self, actor_index, sprite_id):
+        actor_pair = self.actors[actor_index]
+        if actor_pair[2]:
+            self.graph.itemconfigure(sprite_id, state='hidden')
+        else:
+            coord = self.get_coord_of(actor_pair[0])
+            self.move_sprite_to(sprite_id, coord[0], coord[1])
+            self.graph.itemconfigure(sprite_id, state='normal')
+            self.actors[actor_index] = (actor_pair[0],actor_pair[1], True)
 
     def move_sprite_to(self, sprite_id, x, y):
         self.graph.move(sprite_id, x - self.graph.coords(sprite_id)[0], y - self.graph.coords(sprite_id)[1])
