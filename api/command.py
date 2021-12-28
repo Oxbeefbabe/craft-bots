@@ -23,6 +23,7 @@ class Command:
         self.world = world
         self.id = self.world.get_new_id()
         self.world.command_queue.append(self)
+        self.world.total_commands += 1
         self.function_id = function_id
         self.args = args
         self.result = None
