@@ -1,5 +1,6 @@
 import random as r
 import math as m
+import time
 
 from api.command import Command
 from entities.node import Node
@@ -22,9 +23,17 @@ class World:
             self.world_gen_modifiers = world_gen_modifiers
             self.rules = rules
 
-            # Set random seed before any other calls
+            """ 
+            Set random seed before any other calls
+            
+            Save the seed to be output with the results
+            """
+            self.seed = int(time.time())
             if "RANDOM_SEED" in self.world_gen_modifiers:
                 r.seed(self.world_gen_modifiers["RANDOM_SEED"])
+                self.seed = self.world_gen_modifiers["RANDOM_SEED"]
+            else:
+                r.seed(self.seed)
 
             self.building_modifiers = {
                 Building.BUILDING_SPEED:        0,
@@ -37,6 +46,7 @@ class World:
             self.last_id = -1
             self.command_queue = []
             self.total_score = 0
+            self.total_commands = 0
 
             self.actors = []
             self.buildings = []
