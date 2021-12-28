@@ -121,7 +121,7 @@ class GUI(tk.Frame):
             for resource_pair in self.resources:
                 if resource_pair[0] == resource:
                     accounted = True
-            if not accounted:
+            if not accounted and not resource.used:
                 if isinstance(resource.location, Actor):
 
                     node_x = resource.location.node.x + self.padding - self.centre_offset_x
@@ -136,11 +136,18 @@ class GUI(tk.Frame):
                                           self.draw_resource_sprite(node_x, node_y,
                                                                     self.world.get_colour_string(resource.colour)))
                 self.resources.append((resource, self.graph.find_all()[-1:][0]))
-        for resource_pair in self.resources:
-            if isinstance(resource_pair[0].location, Node):
+
+        to_delete = []
+        for index, resource_pair in enumerate(self.resources):
+            if resource_pair[0].used:
+                to_delete.append(index)
+            elif isinstance(resource_pair[0].location, Node):
                 self.draw_res_on_node(resource_pair[0].location, resource_pair[0], resource_pair[1])
-            if isinstance(resource_pair[0].location, Actor):
+            elif isinstance(resource_pair[0].location, Actor):
                 self.draw_res_on_actor(self.get_actor_pair_index(resource_pair[0]), resource_pair[1])
+        for index in to_delete[::-1]:
+            self.graph.delete(self.resources[index][1])
+            del self.resources[index]
 
     def update_model(self):
         self.update_actors()
