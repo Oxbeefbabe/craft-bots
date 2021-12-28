@@ -93,15 +93,16 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
         :param rule_file: (optional) path to the text file that is used to set the rules for the simulation.  Default: None (the default parameters are used)
         :return:
         """
-    global ticks_run_this_second
+    global ticks_run_this_second, sim_stopped
     sim_thread = threading.Thread(target=prep_simulation, args=(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
     sim_thread.start()
+    sim_stopped = False
     while not sim_stopped:
         time.sleep(1)
-        sys.stdout.write(f"\rTick rate: {ticks_run_this_second}")
-        sys.stdout.flush()
+        # sys.stdout.write(f"\rTick rate: {ticks_run_this_second}")
+        # sys.stdout.flush()
         ticks_run_this_second = 0
-    return world.total_score
+    return {"score": world.total_score, "commands_sent": world.total_commands, "ticks": world.tick, "seed": world.world_gen_modifiers["RANDOM_SEED"]}
 
 
 def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file):
