@@ -24,6 +24,7 @@ class Site:
         self.progress = 0
         self.id = self.world.get_new_id()
         self.needed_resources = []
+        self.task = None
         if self.building_type == Building.BUILDING_TASK:
             if target_task is None:
                 for task in self.world.tasks:
@@ -46,7 +47,7 @@ class Site:
         if self.needed_resources:
             self.node.append_site(self)
             self.fields = {"node": self.node.id, "building_type": self.building_type, "deposited_resources": self.deposited_resources,
-                           "needed_resources": self.needed_resources, "progress": self.progress, "id": self.id}
+                           "needed_resources": self.needed_resources, "progress": self.progress, "id": self.id, "task": self.task.id}
 
     def __repr__(self):
         return "Site(" + str(self.id) + ", " + str(self.node) + ")"
@@ -56,9 +57,7 @@ class Site:
 
     def __eq__(self, other):
         if isinstance(other, Site):
-            if self.node == other.node and self.building_type == other.building_type:
-                return True
-        return False
+            return self.id == other.id
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -69,12 +68,13 @@ class Site:
         :param resource: The resource to be added
         :return: True if the resource was deposited and false if it wasn't
         """
-        if resource.location == self.node or resource.location.node == self.node:
+        if resource.location.node == self.node:
             if self.deposited_resources[resource.colour] < self.needed_resources[resource.colour]:
                 resource.set_used(True)
                 self.deposited_resources[resource.colour] += 1
                 self.fields.__setitem__("deposited_resources", self.deposited_resources)
                 resource.location.remove_resource(resource)
+                self.world.resources.remove(resource)
                 resource.set_used(True)
                 return True
         return False
@@ -102,10 +102,6 @@ class Site:
         max_progress = self.max_progress()
         self.set_progress(min(self.progress + building_progress, max_progress))
 
-        if self.progress == max_progress:
-            for actor in self.node.actors:
-                if actor.target == self:
-                    actor.go_idle()
         if self.progress >= self.world.modifiers["BUILD_EFFORT"] * sum(self.needed_resources):
             if self.world.rules["CONSTRUCTION_COMPLETION_NON_DETERMINISTIC"] and r.random() < \
                     self.world.modifiers["CONSTRUCTION_COMPLETION_FAIL_CHANCE"]:
@@ -118,7 +114,8 @@ class Site:
             if self.building_type == Building.BUILDING_TASK:
                 self.task.set_project(new_building)
                 self.task.complete_task()
-            del self
+        elif self.progress == max_progress:
+            self.ignore_me()
 
     def fail_construction(self):
         self.ignore_me()
