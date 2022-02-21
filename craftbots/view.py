@@ -12,11 +12,72 @@ class GUI(tk.Frame):
         super().__init__(master)
         self.master = master
         self.world = world
-        self.graph = tk.Canvas(self, bg="black", height=self.height + self.padding * 2, width=self.width + self.padding * 2)
-        self.graph.create_rectangle(self.padding - self.node_size, self.padding - self.node_size, self.width + self.padding + self.node_size,
+
+        self.graph = tk.Canvas(self, bg="black", height=self.height + self.padding * 2,
+                               width=self.width + self.padding * 2)
+
+        # self.draw_world()
+
+        self.graph.pack()
+        self.pack()
+
+    def draw_world(self):
+        # Clear any previous drawings
+        for object in self.graph.find_all(): self.graph.delete(object)
+
+        # Draw window borders
+        self.graph.create_rectangle(self.padding - self.node_size, self.padding - self.node_size,
+                                    self.width + self.padding + self.node_size,
                                     self.height + self.padding + self.node_size, fill="grey", width=0)
         self.background = self.graph.create_rectangle(self.padding, self.padding, self.width + self.padding,
-                                    self.height + self.padding, fill="white", width=0)
+                                                      self.height + self.padding, fill="white", width=0)
+
+        self.set_centre_offset()
+        self.update_graph()
+
+        # Get / draw all the actors
+        self.actors = []
+        for actor in self.world.actors:
+            self.draw_actor(actor.node.x, actor.node.y)
+            self.actors.append((actor, self.graph.find_all()[-1:][0], False))
+
+        # Get / draw all the resources
+        self.resources = []
+        self.update_resources()
+        """
+        Holding onto this code in case self.update_resources has any unintendend affects
+        for resource in self.world.resources:
+            if isinstance(resource.location, Node):
+                node_x = resource.location.x + self.padding - self.centre_offset_x
+                node_y = resource.location.y + self.padding - self.centre_offset_y
+                self.draw_res_on_node(resource.location, resource,
+                                      self.draw_resource_sprite(node_x, node_y,
+                                                                self.world.get_colour_string(resource.colour)))
+            if isinstance(resource.location, Actor):
+                actor_id = self.get_sprite_id_of(resource.location)
+                actor_x = self.graph.coords(actor_id)[0] + self.padding - self.centre_offset_x
+                actor_y = self.graph.coords(actor_id)[1] + self.padding - self.centre_offset_y
+                self.draw_res_on_actor(resource.location,
+                                       self.draw_resource_sprite(actor_x, actor_y,
+                                                                 self.world.get_colour_string(resource.colour)))
+            self.resources.append((resource, self.graph.find_all()[-1:][0]))
+        """
+
+        self.mines = []
+        for mine in self.world.mines:
+            self.mines.append((mine, self.draw_mine(mine.node.x, mine.node.y, self.world.get_colour_string(mine.colour))))
+
+        self.sites = []
+        for site in self.world.sites:
+            self.sites.append((site, self.draw_site(site.node.x, site.node.y, self.world.get_colour_string(site.building_type))))
+
+        self.buildings = []
+        for building in self.world.buildings:
+            self.buildings.append((building, self.draw_building(building.node.x, building.node.y, self.world.get_colour_string(building.building_type))))
+
+        self.update_actors()
+
+    def set_centre_offset(self):
         avg_node_x = 0
         avg_node_y = 0
         min_x = self.width + 1
@@ -43,40 +104,6 @@ class GUI(tk.Frame):
             self.centre_offset_y = min_y
         if max_y - self.centre_offset_y > self.height:
             self.centre_offset_y = max_y - self.height
-
-        self.update_graph()
-        self.actors = []
-        for actor in self.world.actors:
-            self.draw_actor(actor.node.x, actor.node.y)
-            self.actors.append((actor, self.graph.find_all()[-1:][0], False))
-        self.resources = []
-        for resource in self.world.resources:
-            if isinstance(resource.location, Node):
-                node_x = resource.location.x + self.padding - self.centre_offset_x
-                node_y = resource.location.y + self.padding - self.centre_offset_y
-                self.draw_res_on_node(resource.location, resource,
-                                      self.draw_resource_sprite(node_x, node_y,
-                                                                self.world.get_colour_string(resource.colour)))
-            if isinstance(resource.location, Actor):
-                actor_id = self.get_sprite_id_of(resource.location)
-                actor_x = self.graph.coords(actor_id)[0] + self.padding - self.centre_offset_x
-                actor_y = self.graph.coords(actor_id)[1] + self.padding - self.centre_offset_y
-                self.draw_res_on_actor(resource.location,
-                                       self.draw_resource_sprite(actor_x, actor_y,
-                                                                 self.world.get_colour_string(resource.colour)))
-            self.resources.append((resource, self.graph.find_all()[-1:][0]))
-        self.mines = []
-        for mine in self.world.mines:
-            self.mines.append((mine, self.draw_mine(mine.node.x, mine.node.y, world.get_colour_string(mine.colour))))
-        self.sites = []
-        for site in self.world.sites:
-            self.sites.append((site, self.draw_site(site.node.x, site.node.y, "purple")))
-        self.buildings = []
-        for building in self.world.buildings:
-            self.buildings.append((building, self.draw_building(building.node.x, building.node.y, "purple")))
-        self.update_actors()
-        self.graph.pack()
-        self.pack()
 
     def update_graph(self):
         for edge in self.world.edges:
