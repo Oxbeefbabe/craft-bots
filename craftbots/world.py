@@ -344,7 +344,7 @@ class World:
                                 sites.get(site.id).__setitem__("observers", [actor.id])
         else:
             for site in self.sites:
-                sites.__setitem__(site.id, site.fields)
+                if hasattr(site, 'fields'): sites.__setitem__(site.id, site.fields)
         return sites
 
     def get_mines_info(self, actors):
