@@ -4,6 +4,13 @@ class Resource:
         A resource in the craftbots simulation. Resources are produced from mines and used to build buildings. Each
         colour of the resources has its own special properties that affect how the resource can be collected or used.
 
+        Resource colour is referenced as a number (0 - 4):
+        0 : Red     (Can only be dug a certain times)
+        1 : Blue    (Takes longer to dig)
+        2 : Orange  (Requires 2+ actors to dig)
+        3 : Black   (Takes up the entire inventory space of the actor)
+        4 : Green   (Decays after a period of time)
+
         :param world: The world in which the resources exists
         :param location: The place the the resource currently is
         :param colour: The colour of the resource
