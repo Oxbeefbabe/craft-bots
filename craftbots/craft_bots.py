@@ -21,6 +21,11 @@ root = None
 world = World()
 start_time = time.time()
 ticks_run_this_second = 0
+refresh = False
+results = []
+gui_initialised = False
+gui = None
+kill_switch = False
 
 
 def default_scenario(modifiers, world_gen_modifiers):
@@ -80,7 +85,7 @@ def default_scenario(modifiers, world_gen_modifiers):
                 world.add_site(world.nodes[r.randint(0, world.nodes.__len__() - 1)], building_type)
 
 
-def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scenario,modifier_file=None,world_modifier_file=None,rule_file=None):
+def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scenario,modifier_file=None,world_modifier_file=None,rule_file=None, refresh_sim_on_end=False):
     """
         The command used to start the CraftBots simulation. The simulation will run on a separate thread and the current
         thread will wait for the simulation to finish and return the score achieved.
@@ -93,20 +98,35 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
         :param rule_file: (optional) path to the text file that is used to set the rules for the simulation.  Default: None (the default parameters are used)
         :return:
         """
-    global ticks_run_this_second, sim_stopped
-    sim_thread = threading.Thread(target=prep_simulation, args=(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
-    sim_thread.start()
-    sim_stopped = False
-    while not sim_stopped:
-        time.sleep(1)
-        # sys.stdout.write(f"\rTick rate: {ticks_run_this_second}")
-        # sys.stdout.flush()
-        ticks_run_this_second = 0
-    return {"score": world.total_score, "commands_sent": world.total_commands, "ticks": world.tick, "seed": world.world_gen_modifiers["RANDOM_SEED"]}
+    global ticks_run_this_second, sim_stopped, refresh, root
+    if refresh_sim_on_end:
+        while not kill_switch:
+            sim_thread = threading.Thread(target=prep_simulation, args=(
+                agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
+            sim_thread.start()
+            sim_stopped = False
+            refresh = True
+            while not sim_stopped:
+                time.sleep(1) # Wait for the simulation to stop
+                root.wm_attributes("-topmost", 1)
+                root.focus_force()
+            print(f"Current results: {results}")
+        return results
+    else:
+        sim_thread = threading.Thread(target=prep_simulation, args=(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
+        sim_thread.start()
+        sim_stopped = False
+        while not sim_stopped:
+            time.sleep(1)
+
+            # sys.stdout.write(f"\rTick rate: {ticks_run_this_second}")
+            # sys.stdout.flush()
+            ticks_run_this_second = 0
+        return {"score": world.total_score, "commands_sent": world.total_commands, "ticks": world.tick, "seed": world.seed}
 
 
 def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file):
-    global world
+    global world, view, gui, gui_initialised
     world_gen_modifiers = get_world_gen_modifiers(world_modifier_file)
     modifiers = get_modifiers(modifier_file)
     rules = get_rules(rule_file)
@@ -137,10 +157,15 @@ def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifie
 
     else:
         if use_gui:
-            gui = init_gui()
+            if not gui_initialised: gui = init_gui()
+            else: gui.world = world
+            gui.draw_world()
             sim_thread = threading.Thread(target=lock_step_sim, args=(agents, gui.update_model))
             sim_thread.start()
-            gui.mainloop()
+            if not gui_initialised:
+                gui_initialised = True
+                gui.mainloop()
+
         else:
             sim_thread = threading.Thread(target=lock_step_sim, args=(agents, None))
             sim_thread.start()
@@ -154,7 +179,7 @@ def lock_step_sim(agents, update_model):
             agent.get_next_commands()
 
 
-        time.sleep(1 / world.rules["LOCK_STEP_RATE"])
+        #time.sleep(1 / world.rules["LOCK_STEP_RATE"])
         world.run_tick()
         ticks_run_this_second += 1
 
@@ -220,30 +245,39 @@ def call_repeatedly(interval, func, *args):
 
 
 def init_gui():
-    global root, world
+    global root, world, gui
+    if gui_initialised: return gui
     root = view.tk.Tk()
 
     width = world.world_gen_modifiers["WIDTH"]
     height = world.world_gen_modifiers["HEIGHT"]
     root.title("CraftBots")
-    root.protocol("WM_DELETE_WINDOW", on_close)
+    root.protocol("WM_DELETE_WINDOW", kill_gui)
     root.geometry(str(width + PADDING * 2) + "x" + str(height + PADDING * 2))
     return view.GUI(world, width=width, height=height, padding=PADDING, node_size=NODE_SIZE, master=root)
-
 
 def on_close():
     global world
     print("\nSimulation time up")
-    global sim_stopped, simulation_stop
+    global sim_stopped, simulation_stop, refresh, results
     if simulation_stop is not None:
         simulation_stop()
     sim_stopped = True
+    if refresh:
+        results.append({"score": world.total_score, "commands_sent": world.total_commands, "ticks": world.tick, "seed": world.seed})
+        return
     if root is not None:
         try:
             root.destroy()
         except:
             return on_close()
     return world.total_score
+
+def kill_gui():
+    global kill_switch
+    kill_switch = True
+    on_close()
+    root.destroy()
 
 
 def get_world_gen_modifiers(modifier_file):
