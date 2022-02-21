@@ -4,12 +4,12 @@ def run_once():
     from craftbots import craft_bots
 
     start = time.perf_counter()
-    craft_bots.start_simulation(agent_class=basic_rba.Basic_RBA,
+    print(craft_bots.start_simulation(agent_class=basic_rba.Basic_RBA,
                                 use_gui=True,
                                 modifier_file="craftbots/initialisation_files/simple_modifiers",
                                 world_modifier_file="craftbots/initialisation_files/simple_world_gen_modifiers",
                                 rule_file="craftbots/initialisation_files/simple_rules"
-                                )
+                                ))
     print(f"\n{time.perf_counter() - start}")
 
 def run_evaluation():
@@ -25,5 +25,29 @@ def run_evaluation():
                                   agent_names=["RBA", "Bogo"]
                                   ))
 
+def run_demo():
+    from agents import basic_rba
+    from craftbots import craft_bots
+
+    print(craft_bots.start_simulation(agent_class=basic_rba.Basic_RBA,
+                                      use_gui=True,
+                                      modifier_file="craftbots/initialisation_files/demo_modifiers",
+                                      world_modifier_file="craftbots/initialisation_files/demo_world_gen_modifiers",
+                                      rule_file="craftbots/initialisation_files/demo_rules",
+                                      refresh_sim_on_end=True
+                                      ))
+
+def run_taa():
+    from agents import task_allocator
+    from craftbots import craft_bots
+
+    print(craft_bots.start_simulation(agent_class=task_allocator.TaskAllocator,
+                                      use_gui=True,
+                                      modifier_file="craftbots/initialisation_files/simple_modifiers",
+                                      world_modifier_file="craftbots/initialisation_files/simple_world_gen_modifiers",
+                                      rule_file="craftbots/initialisation_files/simple_rules"
+                                      ))
+
+
 if __name__ == '__main__':
-    run_evaluation()
+    run_taa()
