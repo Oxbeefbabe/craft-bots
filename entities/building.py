@@ -86,6 +86,7 @@ class Building:
 
         if self.world.rules["CONSTRUCTION_NON_DETERMINISTIC"] and r.random() < self.world.modifiers["CONSTRUCTION_FAIL_CHANCE"]:
             print("Constructing failed")
+            self.world.failures += 1
             self.fail_construction()
             return
 
@@ -110,6 +111,7 @@ class Building:
                 if self.world.rules["CONSTRUCTION_COMPLETION_NON_DETERMINISTIC"] and r.random() < \
                         self.world.modifiers["CONSTRUCTION_COMPLETION_FAIL_CHANCE"]:
                     print("Construction completion failed")
+                    self.world.failures += 1
                     self.fail_construction()
                     return
                 self.world.add_actor(self.node)
