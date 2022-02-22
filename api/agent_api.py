@@ -3,7 +3,7 @@ from api.command import Command
 
 class AgentAPI:
 
-    def __init__(self, world, actors, max_commands=10, save_commands=False):
+    def __init__(self, world, actors, max_commands=0, save_commands=False):
         """
         The API for the craftbots simulation. It is given to the agent and the agent can make calls to this to perform
         actions on the simulation or to gather information.
