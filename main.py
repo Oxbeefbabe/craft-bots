@@ -16,13 +16,15 @@ def run_evaluation():
     import evaluator
     from agents import basic_rba
     from agents import bogo
+    from agents import task_allocator
 
-    agents = [basic_rba.Basic_RBA, bogo.Bogo]
-    print(evaluator.run_evaluator(agents, 2,
+    agents = [task_allocator.TaskAllocator]
+    print(evaluator.run_evaluator(agents, 3,
                                   "craftbots/initialisation_files/simple_modifiers",
                                   "craftbots/initialisation_files/simple_rules",
                                   "craftbots/initialisation_files/simple_world_gen_modifiers",
-                                  agent_names=["RBA", "Bogo"]
+                                  "simple_small",
+                                  agent_names=["TAA"]
                                   ))
 
 def run_demo():
@@ -50,4 +52,4 @@ def run_taa():
 
 
 if __name__ == '__main__':
-    run_taa()
+    run_evaluation()
