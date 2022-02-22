@@ -4,6 +4,8 @@ import api.agent_api
 
 DEBUG = 5
 INVENTORY_SPACE = 2
+GREEN_DECAY_TIME = 200
+ACTOR_MOVE_SPEED = 1
 
 
 class TaskAllocator:
@@ -34,7 +36,7 @@ class TaskAllocator:
                 print(f"Actor {actor.id} has no remaining goals in its queue, decomposing some tasks and distributing.")
                 self.distribute_goals(self.decompose_tasks(self.get_valid_tasks()))
 
-            if actor.current_goal is None:
+            if actor.current_goal is None and not actor.command_queue:
                 print(f"Actor {actor.id} has no current goal, popping a new one from its queue.")
                 actor.pop_goal()
 
@@ -205,10 +207,6 @@ class ActorController:
                 self.push(self.api.construct_at, site)
                 self.push(self.finish_goal, include_actor=False)
 
-
-
-
-
             # Deposit Resources from inventory
             for resource in self.api.get_field(self.id, "resources"):
                 if remaining_resources[self.api.get_field(resource, "colour")] > 0:
@@ -228,9 +226,8 @@ class ActorController:
                 for resource in viable_resources:
                     if remaining_resources[self.api.get_field(resource, "colour")] > 0:
                         remaining_resources[self.api.get_field(resource, "colour")] -= 1
+                        self.master.reserved_resources[resource] = (self.current_goal.task, self.current_goal.type)
                         self.push(self.pick_up_resource, resource, include_actor=False)
-
-
 
         elif isinstance(self.target, tuple) and list(map(lambda actor: actor.id, self.master.actors)).__contains__(self.target[0]) and self.api.get_field(self.id, "state") == 0:
             if self.target[1].completed:
@@ -256,16 +253,19 @@ class ActorController:
             if target_node is None: return
 
             path, _ = self.bfs_pathfinding(self.api.get_field(self.id, "node"), target_node)
-            self.push(self.api.move_to, path[0])
+            # if len(path) > 1: self.push(self.api.move_to, path[1], to_front=True)
 
     def execute_command(self, command):
         command[0](*command[1])
 
     def pop(self):
+        lengthy_commands = ['move_to', 'dig_at', 'construct_at']
         if self.command_queue:
             command = self.command_queue[0]
             self.command_queue = self.command_queue[1:]
             self.execute_command(command)
+            if command[0].__name__ not in lengthy_commands: self.pop()
+
 
     def push(self, command, *args, to_front=False, include_actor=True):
         """
@@ -295,6 +295,7 @@ class ActorController:
     def pop_goal(self):
         #TODO: quick fix, if self.goal_queue should be handled elsewhere
         if self.goal_queue:
+
             self.current_goal = self.goal_queue.pop(0)
             self.current_goal.actor = self.id
 
@@ -334,7 +335,7 @@ class ActorController:
 
     def pick_up_resource(self, id):
         self.api.pick_up_resource(self.id, id)
-        self.master.reserved_resources.pop(id, None)
+        #self.master.reserved_resources.pop(id, None)
 
     def drop_resources(self, amount, colour, receiver):
         resources_to_drop = list(filter(lambda resource: self.api.get_field(resource, "colour") == colour, self.api.get_field(self.id, "resources")))[:amount]
@@ -514,11 +515,14 @@ class ActorController:
                 receiving_actor.goal_queue.insert(0, deliver_goal)
                 receiving_actor.goal_queue.insert(0, dig_goal)
 
+    def forget_task(self):
+        pass
+
     def dig_for_resource(self, colour, amount, target_mine=None):
         # Save the current node id for future reference
         current_node = self.api.get_field(self.id, "node")
 
-        if colour == 2:
+        if colour == 2: # orange
             # Deal with orange resource
             active_orange_mines = list(filter(lambda active_mine: active_mine["colour"] == 2, self.master.active_mines))
             if active_orange_mines:
@@ -552,7 +556,15 @@ class ActorController:
 
             # If the mine needed does not exist, go to closest mine and then do this
             if target_mine is None:
-                mine, mine_node, _ = self.find_mine(self.api.get_field(self.id, "node"), colour)
+                """
+                if colour == 4:
+                    mine, mine_node, path_length = self.find_mine(self.api.get_field(self.current_goal.task, "node"), colour)
+                    if path_length * ACTOR_MOVE_SPEED >= GREEN_DECAY_TIME:
+                        self.say(f"Error: not possible to bring green resources to this task {self.current_goal.task} in time.")
+                        self.forget_task()
+                else:
+                """
+                mine, mine_node, path_length = self.find_mine(self.api.get_field(self.id, "node"), colour)
                 self.set_target(mine_node)
                 self.go_to(mine_node, current_node)
                 self.set_target(None)
@@ -585,12 +597,13 @@ class ActorController:
             self.say(f"I can only move 1 black resource at a time.")
             self.goal_queue.insert(0, Goal(self.master.get_goal_id(), Goal.DELIVER, [amount - 1, colour, node],
                                            self.current_goal.task))
-            amount -= 1
+            amount = 1
         elif INVENTORY_SPACE < amount:
             new_amount = INVENTORY_SPACE
             self.goal_queue.insert(0, Goal(self.master.get_goal_id(), Goal.DELIVER, [amount - new_amount, colour, node], self.current_goal.task))
             self.say(f"I don't have enough space to pick up {amount} resources. Picking up {new_amount} resources instead.")
             amount = new_amount
+        self.current_goal.parameters[0] = amount
 
         self.say("Looking for resources to collect")
         destination = self.find_resources(current_node, colour, amount)
