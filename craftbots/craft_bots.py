@@ -19,7 +19,7 @@ sim_stopped = False
 gui_updating = False
 root = None
 world = World()
-start_time = time.time()
+start_time = None
 ticks_run_this_second = 0
 refresh = False
 results = []
@@ -98,7 +98,7 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
         :param rule_file: (optional) path to the text file that is used to set the rules for the simulation.  Default: None (the default parameters are used)
         :return:
         """
-    global ticks_run_this_second, sim_stopped, refresh, root
+    global ticks_run_this_second, sim_stopped, refresh, root, start_time
     if refresh_sim_on_end:
         while not kill_switch:
             sim_thread = threading.Thread(target=prep_simulation, args=(
@@ -113,6 +113,7 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
             print(f"Current results: {results}")
         return results
     else:
+        start_time = time.perf_counter()
         sim_thread = threading.Thread(target=prep_simulation, args=(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
         sim_thread.start()
         sim_stopped = False
@@ -122,7 +123,7 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
             # sys.stdout.write(f"\rTick rate: {ticks_run_this_second}")
             # sys.stdout.flush()
             ticks_run_this_second = 0
-        return {"score": world.total_score, "commands_sent": world.total_commands, "ticks": world.tick, "seed": world.seed}
+        return get_results()
 
 
 def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file):
@@ -244,6 +245,21 @@ def call_repeatedly(interval, func, *args):
     return stopped.set
 
 
+def get_results():
+    global start_time
+    total_time = time.perf_counter() - start_time
+    return {"score": world.total_score,
+            "commands_sent": world.total_commands,
+            "ticks": world.tick,
+            "seed": world.seed,
+            "tasks_completed": len(list(filter(lambda task: task.completed(), world.tasks))),
+            "remaining_sites": len(world.sites),
+            "remaining_resources": len(world.resources),
+            "actor_idle_time": world.actor_idle_time,
+            "failures": world.failures,
+            "time_to_run": total_time}
+
+
 def init_gui():
     global root, world, gui
     if gui_initialised: return gui
@@ -256,6 +272,7 @@ def init_gui():
     root.geometry(str(width + PADDING * 2) + "x" + str(height + PADDING * 2))
     return view.GUI(world, width=width, height=height, padding=PADDING, node_size=NODE_SIZE, master=root)
 
+
 def on_close():
     global world
     print("\nSimulation time up")
@@ -264,7 +281,7 @@ def on_close():
         simulation_stop()
     sim_stopped = True
     if refresh:
-        results.append({"score": world.total_score, "commands_sent": world.total_commands, "ticks": world.tick, "seed": world.seed})
+        results.append(get_results())
         return
     if root is not None:
         try:
@@ -272,6 +289,7 @@ def on_close():
         except:
             return on_close()
     return world.total_score
+
 
 def kill_gui():
     global kill_switch
