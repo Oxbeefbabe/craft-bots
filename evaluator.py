@@ -42,7 +42,7 @@ TODO:
  - implement testing multiple different rule sets
  - implement some parallel simulation 
 """
-def run_evaluator(agents, epochs, modifiers_path, rules_path, world_gen_path, share_seeds=True, agent_names=None):
+def run_evaluator(agents, epochs, modifiers_path, rules_path, world_gen_path, rule_set_name, share_seeds=True, agent_names=None):
 
     # Set agent names to default if none are given, not given in list, or list of agent names is a different length to agent list
     if agent_names is None or (isinstance(agent_names, list) and len(agents) != len(agent_names)):
@@ -66,4 +66,25 @@ def run_evaluator(agents, epochs, modifiers_path, rules_path, world_gen_path, sh
                                     modifier_file=modifiers_path,
                                     world_modifier_file=world_gen_path,
                                     rule_file=rules_path))
+    write_results(results, rule_set_name)
     return results
+
+
+def write_results(results, rule_set_name):
+    for agent in results.keys():
+        with open(f"{rule_set_name}_{agent}_results.csv", "a") as file:
+            for result in results[agent]:
+                actor_idle_string = ""
+                for actor in result["actor_idle_time"].keys():
+                    actor_idle_string += f"{actor}:{result['actor_idle_time'][actor]};"
+                file.write(f"{result['score']},"
+                           f"{result['commands_sent']},"
+                           f"{result['ticks']},"
+                           f"{result['seed']},"
+                           f"{result['tasks_completed']},"
+                           f"{result['remaining_sites']},"
+                           f"{result['remaining_resources']},"
+                           f"{actor_idle_string},"
+                           f"{result['failures']},"
+                           f"{result['time_to_run']}\n")
+            file.close()
