@@ -47,6 +47,9 @@ class World:
             self.command_queue = []
             self.total_score = 0
             self.total_commands = 0
+            self.resources_collected = 0
+            self.actor_idle_time = {}
+            self.failures = 0
 
             self.actors = []
             self.buildings = []
@@ -493,6 +496,10 @@ class World:
             if r.random() < self.modifiers["NEW_TASK_CHANCE"]:
                 self.tasks.append(Task(self))
         self.tick += 1
+        for actor in self.actors:
+            if actor.state == Actor.IDLE:
+                #TODO: Is this the best way to track if an actor is idle? If it does things that happen instantly, like picking up a resource, then it is still considered idle.
+                self.actor_idle_time[actor.id] += 1
         """
         if self.tick % 100 == 0:
             print(f"Actors: {self.actors}\n"
@@ -537,10 +544,12 @@ class World:
 
     def add_actor(self, node):
         self.actors.append(Actor(self, node))
+        self.actor_idle_time[self.actors[-1].id] = 0
         return self.actors[-1]
 
     def add_resource(self, location, colour):
         self.resources.append(Resource(self, location, colour))
+        self.resources_collected += 1
         return self.resources[-1]
 
     def add_mine(self, node, colour):
