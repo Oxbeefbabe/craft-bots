@@ -6,6 +6,7 @@ DEBUG = 5
 INVENTORY_SPACE = 2
 GREEN_DECAY_TIME = 200
 ACTOR_MOVE_SPEED = 1
+BLACK_HEAVY = False
 
 
 class TaskAllocator:
@@ -172,7 +173,7 @@ class ActorController:
                     self.master.active_mines.remove(mine_tracker)
 
                 for resource in self.api.get_field(current_node, "resources"):
-                    if resource_amount <= 0: return
+                    if resource_amount <= 0: return self.finish_goal()
                     if self.api.get_field(resource, "colour") == target_colour and not resource in self.master.reserved_resources:
                         self.master.reserved_resources[resource] = (self.current_goal.task, Goal.DELIVER)
                         resource_amount -= 1
@@ -593,7 +594,7 @@ class ActorController:
 
         # If actor does not have enough space in its inventory to get the resources, pick up what you can and come back for more
         #TODO: when more multitasking is implemented, this code always assumes the actors inventory is empty, which will cause issues
-        if colour == 3 and amount > 1:
+        if colour == 3 and amount > 1 and BLACK_HEAVY:
             self.say(f"I can only move 1 black resource at a time.")
             self.goal_queue.insert(0, Goal(self.master.get_goal_id(), Goal.DELIVER, [amount - 1, colour, node],
                                            self.current_goal.task))
