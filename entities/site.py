@@ -88,6 +88,7 @@ class Site:
         if self.world.rules["CONSTRUCTION_NON_DETERMINISTIC"] and r.random() < \
                 self.world.modifiers["CONSTRUCTION_FAIL_CHANCE"]:
             print("Constructing failed")
+            self.world.failures += 1
             self.fail_construction()
             return
 
@@ -105,11 +106,13 @@ class Site:
         if self.progress >= self.world.modifiers["BUILD_EFFORT"] * sum(self.needed_resources):
             if self.world.rules["CONSTRUCTION_COMPLETION_NON_DETERMINISTIC"] and r.random() < \
                     self.world.modifiers["CONSTRUCTION_COMPLETION_FAIL_CHANCE"]:
+                self.world.failures += 1
                 print("Construction completion failed")
                 self.fail_construction()
                 return
             new_building = self.world.add_building(self.node, self.building_type)
             self.node.remove_site(self)
+            self.world.sites.remove(self)
             self.ignore_me()
             if self.building_type == Building.BUILDING_TASK:
                 self.task.set_project(new_building)

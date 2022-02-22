@@ -46,6 +46,7 @@ class Mine:
         if self.world.rules["DIGGING_NON_DETERMINISTIC"] and r.random() < \
                 self.world.modifiers["DIGGING_FAIL_CHANCE"]:
             print("Digging failed")
+            self.world.failures += 1
             self.set_progress(0)
             self.ignore_me()
             return

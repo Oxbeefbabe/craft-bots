@@ -93,6 +93,7 @@ class Actor:
                 print("Travel failed")
                 self.cancel_action()
                 self.set_state(Actor.RECOVERING)
+                self.world.failures += 1
                 return
 
             self.set_progress(self.progress + (move_speed * speed_mod))
@@ -138,6 +139,7 @@ class Actor:
             if self.world.rules["PICK_UP_NON_DETERMINISTIC"] and r.random() < \
                     self.world.modifiers["PICK_UP_FAIL_CHANCE"]:
                 print("Pick up failed")
+                self.world.failures += 1
                 return False
             resource.set_location(self)
             self.append_resource(resource)
@@ -157,6 +159,7 @@ class Actor:
             if self.world.rules["DROP_NON_DETERMINISTIC"] and r.random() < \
                     self.world.modifiers["DROP_FAIL_CHANCE"]:
                 print("Drop failed")
+                self.world.failures += 1
                 return False
             resource.set_location(self.node)
             self.remove_resource(resource)
@@ -204,6 +207,7 @@ class Actor:
             if self.world.rules["SITE_CREATION_NON_DETERMINISTIC"] and r.random() < \
                     self.world.modifiers["SITE_CREATION_FAIL_CHANCE"]:
                 print("Site Creation failed")
+                self.world.failures += 1
                 return False
             self.world.add_site(self.node, colour, target_task=target_task)
             return True
@@ -246,6 +250,7 @@ class Actor:
             if self.world.rules["DEPOSIT_NON_DETERMINISTIC"] and r.random() < \
                     self.world.modifiers["DEPOSIT_FAIL_CHANCE"]:
                 print("Deposit failed")
+                self.world.failures += 1
                 return False
             return site.deposit_resources(resource)
         return False
