@@ -2,6 +2,7 @@ import tkinter as tk
 from entities.node import Node
 from entities.actor import Actor
 
+LABELS = True
 
 class GUI(tk.Frame):
     def __init__(self, world, width=350, height=350, padding=7, master=None, node_size=7):
@@ -38,30 +39,11 @@ class GUI(tk.Frame):
         # Get / draw all the actors
         self.actors = []
         for actor in self.world.actors:
-            self.draw_actor(actor.node.x, actor.node.y)
-            self.actors.append((actor, self.graph.find_all()[-1:][0], False))
+            self.actors.append((actor, self.draw_actor(actor.node.x, actor.node.y), False, self.draw_label(actor.node.x, actor.node.y, text=actor.id)))
 
         # Get / draw all the resources
         self.resources = []
         self.update_resources()
-        """
-        Holding onto this code in case self.update_resources has any unintendend affects
-        for resource in self.world.resources:
-            if isinstance(resource.location, Node):
-                node_x = resource.location.x + self.padding - self.centre_offset_x
-                node_y = resource.location.y + self.padding - self.centre_offset_y
-                self.draw_res_on_node(resource.location, resource,
-                                      self.draw_resource_sprite(node_x, node_y,
-                                                                self.world.get_colour_string(resource.colour)))
-            if isinstance(resource.location, Actor):
-                actor_id = self.get_sprite_id_of(resource.location)
-                actor_x = self.graph.coords(actor_id)[0] + self.padding - self.centre_offset_x
-                actor_y = self.graph.coords(actor_id)[1] + self.padding - self.centre_offset_y
-                self.draw_res_on_actor(resource.location,
-                                       self.draw_resource_sprite(actor_x, actor_y,
-                                                                 self.world.get_colour_string(resource.colour)))
-            self.resources.append((resource, self.graph.find_all()[-1:][0]))
-        """
 
         self.mines = []
         for mine in self.world.mines:
@@ -113,6 +95,7 @@ class GUI(tk.Frame):
             y2 = edge.node_b.y + self.padding - self.centre_offset_y
             self.graph.create_line(x1, y1, x2, y2, fill="blue")
         for node in self.world.nodes:
+            self.draw_label(node.x - self.node_size + 4, node.y - self.node_size + 4, node.id)
             x = node.x + self.padding - self.centre_offset_x
             y = node.y + self.padding - self.centre_offset_y
             self.graph.create_oval(x - self.node_size, y - self.node_size, x + self.node_size, y + self.node_size, fill="white")
@@ -123,16 +106,18 @@ class GUI(tk.Frame):
             for index, actor_pair in enumerate(self.actors):
                 if actor_pair[0] == actor:
                     accounted = True
-                    self.actors[index] = (actor_pair[0], actor_pair[1], False)
+                    if not len(actor_pair) == 4:
+                        print("hello")
+                    self.actors[index] = (actor_pair[0], actor_pair[1], False, actor_pair[3])
             if not accounted:
-                self.draw_actor(actor.node.x, actor.node.y)
-                self.actors.append((actor, self.graph.find_all()[-1:][0], False))
+                self.actors.append((actor, self.draw_actor(actor.node.x, actor.node.y), False, self.draw_label(actor.node.x, actor.node.y, text=actor.id)))
 
         for actor_pair in self.actors:
             if actor_pair[0].state == 0:
                 dx = actor_pair[0].node.x + self.padding - self.centre_offset_x - 3 - self.graph.coords(actor_pair[1])[0]
                 dy = actor_pair[0].node.y + self.padding - self.centre_offset_y - 3 - self.graph.coords(actor_pair[1])[1]
                 self.graph.move(actor_pair[1], dx, dy)
+                self.graph.move(actor_pair[3], dx, dy)
             if actor_pair[0].state == 1 or actor_pair[0].state == 4:
                 new_x = (actor_pair[0].target[1].x - actor_pair[0].node.x) \
                         * (actor_pair[0].progress / actor_pair[0].target[0].length()) + actor_pair[0].node.x
@@ -141,6 +126,7 @@ class GUI(tk.Frame):
                 dx = new_x + self.padding - self.centre_offset_x - 3 - self.graph.coords(actor_pair[1])[0]
                 dy = new_y + self.padding - self.centre_offset_y - 3 - self.graph.coords(actor_pair[1])[1]
                 self.graph.move(actor_pair[1], dx, dy)
+                self.graph.move(actor_pair[3], dx, dy)
 
     def update_resources(self):
         for resource in self.world.resources:
@@ -253,7 +239,7 @@ class GUI(tk.Frame):
             coord = self.get_coord_of(actor_pair[0])
             self.move_sprite_to(sprite_id, coord[0], coord[1])
             self.graph.itemconfigure(sprite_id, state='normal')
-            self.actors[actor_index] = (actor_pair[0],actor_pair[1], True)
+            self.actors[actor_index] = (actor_pair[0],actor_pair[1], True, actor_pair[3])
 
     def move_sprite_to(self, sprite_id, x, y):
         self.graph.move(sprite_id, x - self.graph.coords(sprite_id)[0], y - self.graph.coords(sprite_id)[1])
@@ -336,7 +322,12 @@ class GUI(tk.Frame):
         return self.graph.create_rectangle(x - 2, y - 2, x + 2, y + 2, fill=colour, outline=colour, width=1)
     
     def draw_actor(self, node_x, node_y):
-        self.graph.create_oval(node_x + self.padding - self.centre_offset_x - 3,
+        return self.graph.create_oval(node_x + self.padding - self.centre_offset_x - 3,
                                node_y + self.padding - self.centre_offset_y - 3,
                                node_x + self.padding - self.centre_offset_x + 3,
                                node_y + self.padding - self.centre_offset_y + 3, fill="grey")
+
+    def draw_label(self, x, y, text):
+        return self.graph.create_text(x + self.padding - self.centre_offset_x - 3,
+                                      y+ self.padding - self.centre_offset_y - 3,
+                                      text=text, fill="black" if LABELS else "white")
