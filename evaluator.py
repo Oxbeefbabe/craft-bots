@@ -2,6 +2,7 @@ import random
 import time
 
 from craftbots import craft_bots
+from os.path import exists
 
 def get_seed(world_gen_path):
     return craft_bots.get_world_gen_modifiers(world_gen_path)["RANDOM_SEED"]
@@ -72,20 +73,36 @@ def run_evaluator(agents, epochs, modifiers_path, rules_path, world_gen_path, ru
 
 
 def write_results(result, rule_set_name, agent):
+    path = f"{rule_set_name}_{agent}_results.csv"
+    if not exists(path):
+        with open(path,"a") as file:
+            file.write("Seed,"
+                       "Score,"
+                       "Potential_Score,"
+                       "Commands_Sent,"
+                       "Failures,"
+                       "Tasks_Completed,"
+                       "Remaining_Sites,"
+                       "Remaining_Resources,"
+                       "Actor_Idle_Time,"
+                       "Ticks,"
+                       "Time_to_Run\n")
+            file.close()
     try:
-        with open(f"{rule_set_name}_{agent}_results.csv", "a") as file:
+        with open(path, "a") as file:
             actor_idle_string = ""
             for actor in result["actor_idle_time"].keys():
                 actor_idle_string += f"{actor}:{result['actor_idle_time'][actor]};"
-            file.write(f"{result['score']},"
+            file.write(f"{result['seed']},"
+                       f"{result['score']},"
+                       f"{result['potential_score']},"
                        f"{result['commands_sent']},"
-                       f"{result['ticks']},"
-                       f"{result['seed']},"
+                       f"{result['failures']},"
                        f"{result['tasks_completed']},"
                        f"{result['remaining_sites']},"
                        f"{result['remaining_resources']},"
                        f"{actor_idle_string},"
-                       f"{result['failures']},"
+                       f"{result['ticks']},"
                        f"{result['time_to_run']}\n")
             file.close()
     except:

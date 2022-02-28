@@ -248,16 +248,19 @@ def call_repeatedly(interval, func, *args):
 def get_results():
     global start_time
     total_time = time.perf_counter() - start_time
-    return {"score": world.total_score,
+    return {"seed": world.seed,
+            "score": world.total_score,
+            "potential_score": sum(list(map(lambda task: task.get_score(), world.tasks))),
             "commands_sent": world.total_commands,
-            "ticks": world.tick,
-            "seed": world.seed,
+            "failures": world.failures,
             "tasks_completed": len(list(filter(lambda task: task.completed(), world.tasks))),
             "remaining_sites": len(world.sites),
             "remaining_resources": len(world.resources),
             "actor_idle_time": world.actor_idle_time,
-            "failures": world.failures,
-            "time_to_run": total_time}
+            "ticks": world.tick,
+            "time_to_run": total_time,
+
+            }
 
 
 def init_gui():

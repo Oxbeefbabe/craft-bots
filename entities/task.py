@@ -51,7 +51,10 @@ class Task:
         score provided by the task and added to a total score variable in the simulation
         """
 
-        self.world.total_score += (sum(self.needed_resources) * self.world.modifiers["TASK_SCORE_A"]) + \
+        self.world.total_score += self.get_score()
+
+    def get_score(self):
+        return (sum(self.needed_resources) * self.world.modifiers["TASK_SCORE_A"]) + \
                                   (self.world.modifiers["TASK_SCORE_B"] *
                                    (sum(self.needed_resources) ** self.world.modifiers["TASK_SCORE_C"]))
 

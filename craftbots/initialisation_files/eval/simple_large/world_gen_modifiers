@@ -1,0 +1,55 @@
+# Craftbots will overwrite the defaults with your values.
+
+# Random Seed. Uncomment for fixed setup.
+RANDOM_SEED = 0
+
+# Number of initial tasks
+INITIAL_TASKS = 6
+
+# Generate new initial tasks if all tasks are complete
+REFRESH_TASKS = 0
+
+# Width and height of the map
+WIDTH = 600
+HEIGHT = 600
+
+# Control the parameters of the graph creation
+MAX_NODES = 30
+CAST_DISTANCE = 100
+MIN_DISTANCE = 50
+CONNECT_DISTANCE = 100
+MAX_ATTEMPTS = 100
+RANDOM_DEVIATION = 10
+
+# Control how many mines, resources are placed when the world is created
+NUM_OF_RED_RESOURCES = 0
+NUM_OF_BLUE_RESOURCES = 0
+NUM_OF_ORANGE_RESOURCES = 0
+NUM_OF_BLACK_RESOURCES = 0
+NUM_OF_GREEN_RESOURCES = 0
+
+NUM_OF_RED_MINES = 3
+NUM_OF_BLUE_MINES = 3
+NUM_OF_ORANGE_MINES = 3
+NUM_OF_BLACK_MINES = 3
+NUM_OF_GREEN_MINES = 3
+
+# Control how many initial buildings or sites are placed
+NUM_BUILDING_SPEED = 0
+NUM_BUILDING_MINE = 0
+NUM_BUILDING_CONSTRUCTION = 0
+NUM_BUILDING_INVENTORY = 0
+NUM_BUILDING_ACTOR_SPAWN = 0
+
+NUM_SITE_SPEED = 0
+NUM_SITE_MINE = 0
+NUM_SITE_CONSTRUCTION = 0
+NUM_SITE_INVENTORY = 0
+NUM_SITE_ACTOR_SPAWN = 0
+
+# Control how many resources the actors start with
+ACTOR_NUM_OF_RED_RESOURCES = 0
+ACTOR_NUM_OF_BLUE_RESOURCES = 0
+ACTOR_NUM_OF_ORANGE_RESOURCES = 0
+ACTOR_NUM_OF_BLACK_RESOURCES = 0
+ACTOR_NUM_OF_GREEN_RESOURCES = 0
