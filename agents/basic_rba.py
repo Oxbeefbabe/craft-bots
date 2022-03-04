@@ -12,22 +12,13 @@ class Basic_RBA:
         self.needed_orange = 0
         self.tasks = []
         self.actors = []
+        self.active_mines = []
+        self.reserved_resources = []
 
         self.api: agent_api.AgentAPI
 
         for actor in self.api.actors:
-            self.actors.append(Actor_Info(actor, api))
-
-        # Go to orange
-        # Mine at orange
-        # Pick up required orange
-        # Go to / start site
-        # Deposit orange to site
-        # Pick up red / blue
-        # Deposit red / blue to site
-        # Pick up / drop off black to site
-        # Pick up / drop off green to site
-        # Build
+            self.actors.append(Actor_Info(actor, api, self))
 
 
     def get_tasks(self, num):
@@ -41,8 +32,10 @@ class Basic_RBA:
             if available_tasks[task_id]["completed"]() or assigned_tasks.__contains__(task_id):
                 available_tasks.pop(task_id)
         try:
+            available_tasks = list(available_tasks.keys())
+            if len(available_tasks) < num : available_tasks.extend(assigned_tasks)
             for i in range(num):
-                tasks.append(list(available_tasks.keys())[i])
+                tasks.append(available_tasks.pop())
         except IndexError:
             pass
 
@@ -56,16 +49,21 @@ class Basic_RBA:
                 if self.api.get_field(actor.task, "completed")():
                     actor.task = None
                     actor.auto_run = False
-            if not self.api.get_field(actor.id, "state"):
-                if actor.auto_run:
-                    actor.pop()
-                    if not actor.command_queue:
-                        actor.auto_run = False
-                else:
-                    self.assign_tasks([actor])
-                    if actor.task is not None:
-                        actor.solve_task()
-                        actor.auto_run = True
+                elif actor.auto_run:
+                    actor.update()
+                    if not self.api.get_field(actor.id, "state"):
+                        actor.pop()
+                        if not actor.command_queue:
+                            actor.auto_run = False
+                elif not actor.command_queue and not self.api.get_field(actor.id, "state"):
+                    actor.solve_task()
+                    actor.auto_run = True
+
+            else:
+                self.assign_tasks([actor])
+                if actor.task is not None:
+                    actor.solve_task()
+                    actor.auto_run = True
 
 
         self.thinking = False
@@ -79,10 +77,6 @@ class Basic_RBA:
             print("No tasks remaining")
 
 
-
-
-
-
 class Actor_Info:
     """
     A class used to hold some information about a specific actor and provide a bit of automation for execution of a
@@ -91,13 +85,39 @@ class Actor_Info:
 
     """
 
-    def __init__(self, actor_id, api, auto_run=False, task=None):
+    resource_colour = ["Red","Blue","Orange","Black","Green"]
+
+    def __init__(self, actor_id, api, master, auto_run=False, task=None):
         self.id = actor_id
         self.api = api
         self.command_queue = []
         self.auto_run = auto_run
         self.task = task
+        self.master = master
 
+    def update(self):
+        if self.api.get_field(self.id, "state") == 2: # Digging
+
+            current_node = self.api.get_field(self.id, "node")
+            target_colour = self.api.get_field(self.api.get_field(self.id, "target"), "colour")
+            viable_resources = list(
+                filter(lambda resource_id: self.api.get_field(resource_id, "colour") == target_colour,
+                       self.api.get_field(current_node, "resources")))
+
+            mine_tracker = list(filter(lambda mine: mine["actors"].__contains__(self.id), self.master.active_mines))[0]
+            if len(viable_resources) >= mine_tracker["target_amount"]:
+                resource_amount = self.api.get_field(self.task, "needed_resources")[target_colour]
+                self.say(
+                    f"{len(viable_resources)} {self.resource_colour[target_colour]} resources collected, of which I need {resource_amount}. Picking up now.", True)
+                self.api.cancel_action(self.id)
+                self.pick_up_x_resources(target_colour, resource_amount)
+                mine_tracker["actors"].remove(self.id)
+                if not mine_tracker["actors"]:
+                    self.master.active_mines.remove(mine_tracker)
+            else:
+
+                if not self.command_queue[0][0].__name__ == "dig_at":
+                    self.push(self.api.dig_at, self.api.get_field(self.id, "target"), to_front=True)
 
     def execute_command(self, command):
         command[0](*command[1])
@@ -125,55 +145,71 @@ class Actor_Info:
 
         #print(self.command_queue)
 
+    def say(self, message, now=False):
+        self.push(print, f"[{self.id}] {message}", to_front=now, include_actor=False)
+
     def solve_task(self):
         self.api : agent_api.AgentAPI
+
         self.command_queue = []
         needed_resources = self.api.get_field(self.task, "needed_resources")
-        held_resources = [0, 0, 0, 0, 0]
-        current_node = self.api.get_field(self.id, "node")
+        # held_resources = [0, 0, 0, 0, 0]
+        # current_node = self.api.get_field(self.id, "node")
         task_node = self.api.get_field(self.task, "node")
 
 
         for resource_type in range(len(needed_resources)):
             resource_amount = needed_resources[resource_type]
             if resource_amount:
-                mine, mine_node = self.find_mine(current_node, resource_type)
-                self.go_to(mine_node, current_node)
-                current_node = mine_node
-                for _ in range(resource_amount):
-                    self.push(self.api.dig_at, mine)
-                for _ in range(resource_amount):
-                    self.push(self.pick_up_resource_of, resource_type, include_actor=False)
+                self.say(f"Starting to gather {resource_amount} {self.resource_colour[resource_type]} resource(s)")
+                self.push(self.dig_for_resource, resource_type, resource_amount, include_actor=False)
 
-        self.go_to(task_node, current_node)
-        current_node = task_node
+        self.say(f"Going to finish task {self.task} in node {task_node}")
+        self.push(self.go_to, task_node, None, True, include_actor=False)
 
+        self.say(f"Arrived at node {task_node}. Beginning construction")
         self.push(self.api.start_site, 0 , self.task)
+        self.push(self.read_assigned_site, include_actor=False)
         self.push(self.finish_off_site, include_actor=False)
+        self.say(f"I've been assigned task {self.task} and I am solving it", True)
 
-    def pick_up_resource_of(self, colour):
-        for resource in self.api.get_field(self.api.get_field(self.id, "node"), "resources"):
-            if self.api.get_field(resource, "colour") == colour:
-                self.push(self.api.pick_up_resource, resource, to_front=True)
-                return
+    def read_assigned_site(self):
+        self.say(f"Site {self.api.get_field(self.task, 'project')} created, finishing it off")
+
+    def pick_up_x_resources (self, colour, amount = 1):
+        current_node = self.api.get_field(self.id, "node")
+        viable_resources = list(
+            filter(lambda resource_id: self.api.get_field(resource_id, "colour") == colour,
+                   self.api.get_field(current_node, "resources")))
+
+        viable_resources = list(filter(lambda resource_id : not self.master.reserved_resources.__contains__(resource_id), viable_resources))
+
+        for i in range(amount):
+            self.push(self.pick_up_resource, viable_resources[i], to_front=True, include_actor=False)
+            self.master.reserved_resources.append(viable_resources[i])
+
+    def pick_up_resource(self, id):
+        self.api.pick_up_resource(self.id, id)
+        self.master.reserved_resources.remove(id)
 
     def finish_off_site(self):
         #deposits all resources in inventory into a site and starts construction
         if self.api.get_field(self.id, "node") == self.api.get_field(self.task, "node"):
             site = self.api.get_field(self.task, "project")
             # print(self.api.get_by_id(self.task))
+            self.say(f"Building at site {site}")
             self.push(self.api.construct_at, site)
-            resources = self.api.get_field(self.id, "resources")
             for resource in self.api.get_field(self.id, "resources"):
+                self.say(f"Depositing resource {resource} into site {site}", True)
                 self.push(self.api.deposit_resources, site, resource, to_front=True)
 
-    def go_to(self, target_node, start_node = None):
+    def go_to(self, target_node, start_node = None, now = False):
         if start_node is None:
             start_node = self.api.get_field(self.id, "node")
-        path = self.bfs_pathfinding(start_node, target_node)
+        path, _ = self.bfs_pathfinding(start_node, target_node)
         if path:
-            for node in path:
-                self.push(self.api.move_to, node)
+            for node in path[::(-1 if now else 1)]:
+                self.push(self.api.move_to, node, to_front=now)
 
     def find_mine(self, node, colour):
         # finds the closest mine of the given colour to the specific node
@@ -197,7 +233,7 @@ class Actor_Info:
                 mines = self.api.get_field(current_path[0][-1], "mines")
                 for mine in mines:
                     if self.api.get_field(mine, "colour") == colour:
-                        return (mine, current_path[0][-1])
+                        return (mine, current_path[0][-1], current_path[1])
                 explored[current_path[0][-1]] = current_path
                 for edge in self.api.get_field(current_path[0][-1], "edges"):
                     # edge is id of an edge connected to current_path[0][-1]
@@ -230,7 +266,7 @@ class Actor_Info:
         while True:
             if frontier:
                 current_path = frontier.pop(smallest_key(frontier))
-                if current_path[0][-1] == end_node: return current_path[0]
+                if current_path[0][-1] == end_node: return current_path[0], current_path[1]
                 explored[current_path[0][-1]] = current_path
                 for edge in self.api.get_field(current_path[0][-1], "edges"):
                     # edge is id of an edge connected to current_path[0][-1]
@@ -244,3 +280,54 @@ class Actor_Info:
                     elif not frontier.__contains__(next_node) or frontier[next_node][1] > new_path[1]:
                         frontier[next_node] = new_path
             else: return []
+
+    def dig_for_resource(self, colour, amount, target_mine = None):
+        # Save the current node id for future reference
+        current_node = self.api.get_field(self.id, "node")
+
+        if colour == 2:
+            # Deal with orange resource
+            active_orange_mines = list(filter(lambda active_mine : active_mine["colour"] == 2, self.master.active_mines))
+            if active_orange_mines:
+                orange_mine_distances = list(map(lambda mine : (self.bfs_pathfinding(current_node, mine["mine_node"]))[1], active_orange_mines))
+                closest_mine = active_orange_mines[orange_mine_distances.index(min(orange_mine_distances))]
+                self.push(self.api.dig_at, closest_mine["mine_id"], to_front=True)
+                self.go_to(closest_mine["mine_node"], current_node, now=True)
+                closest_mine["actors"].append(self.id)
+                closest_mine["target_amount"] += amount
+                return
+            else:
+                mine, mine_node, _ = self.find_mine(self.api.get_field(self.id, "node"), colour)
+                self.push(self.api.dig_at, mine, to_front=True)
+                self.go_to(mine_node, current_node, now=True)
+                self.master.active_mines.append(
+                    {"mine_id": target_mine, "mine_node": mine_node, "target_amount": amount, "colour": colour,
+                     "actors": [self.id]})
+                return
+        else:
+            # Check if a mine of the right colour exists at this node, if the mine is not given
+            if target_mine is None:
+                for mine_id in self.api.get_field(current_node, "mines"):
+                    if self.api.get_field(mine_id, "colour") == colour:
+                        target_mine = mine_id
+                        break
+
+            # If the mine needed does not exist, go to closest mine and then do this
+            if target_mine is None:
+                mine, mine_node, _ = self.find_mine(self.api.get_field(self.id, "node"), colour)
+                self.push(self.dig_for_resource, colour, amount, mine, to_front=True, include_actor=False)
+                self.go_to(mine_node, current_node, now=True)
+                return
+
+        # Check if any actors are already digging at my target mine
+        for active_mine in self.master.active_mines:
+            if active_mine["mine_id"] == target_mine:
+                # Squeeze in
+                active_mine["actors"].append(self.id)
+                active_mine["target_amount"] += amount
+                self.api.dig_at(self.id, target_mine)
+                return
+
+        # Otherwise let other actors know you are here
+        self.master.active_mines.append({"mine_id": target_mine, "mine_node": current_node, "target_amount": amount, "colour": colour, "actors":[self.id]})
+        self.api.dig_at(self.id, target_mine)

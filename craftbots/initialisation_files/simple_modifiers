@@ -5,7 +5,7 @@ NUM_OF_ACTORS = 3
 ACTOR_MOVE_SPEED = 1
 DIG_SPEED = 3
 BUILD_SPEED = 3
-INVENTORY_SIZE = 99999
+INVENTORY_SIZE = 3
 LOOK_EFFORT = 20
 
 # Modifiers for the different mines and resources

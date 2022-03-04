@@ -1,16 +1,14 @@
-def run_once():
+def run_rba():
     import time
     from agents import basic_rba
     from craftbots import craft_bots
 
-    start = time.perf_counter()
     print(craft_bots.start_simulation(agent_class=basic_rba.Basic_RBA,
                                 use_gui=True,
                                 modifier_file="craftbots/initialisation_files/simple_modifiers",
                                 world_modifier_file="craftbots/initialisation_files/simple_world_gen_modifiers",
                                 rule_file="craftbots/initialisation_files/simple_rules"
                                 ))
-    print(f"\n{time.perf_counter() - start}")
 
 def run_evaluation():
     import evaluator
@@ -20,12 +18,12 @@ def run_evaluation():
 
     agents = [task_allocator.TaskAllocator]
     print(evaluator.run_evaluator(agents, 3,
-                                  "craftbots/initialisation_files/simple_modifiers",
-                                  "craftbots/initialisation_files/simple_rules",
-                                  "craftbots/initialisation_files/simple_world_gen_modifiers",
-                                  "simple_small",
-                                  agent_names=["TAA"]
-                                  ))
+                                    "craftbots/initialisation_files/eval/simple_small/modifiers",
+                                    "craftbots/initialisation_files/eval/simple_small/rules",
+                                    "craftbots/initialisation_files/eval/simple_small/world_gen_modifiers",
+                                    "simple_small",
+                                    agent_names=["TAA"]
+                                    ))
 
 def run_demo():
     from agents import basic_rba
@@ -45,11 +43,11 @@ def run_taa():
 
     print(craft_bots.start_simulation(agent_class=task_allocator.TaskAllocator,
                                       use_gui=True,
-                                      modifier_file="craftbots/initialisation_files/simple_modifiers",
-                                      world_modifier_file="craftbots/initialisation_files/simple_world_gen_modifiers",
-                                      rule_file="craftbots/initialisation_files/simple_rules"
+                                      modifier_file="craftbots/initialisation_files/eval/simple_small/modifiers",
+                                      world_modifier_file="craftbots/initialisation_files/eval/simple_small/world_gen_modifiers",
+                                      rule_file="craftbots/initialisation_files/eval/simple_small/rules"
                                       ))
 
 
 if __name__ == '__main__':
-    run_evaluation()
+    run_taa()
