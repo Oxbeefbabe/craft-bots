@@ -1,0 +1,71 @@
+# Craftbots will overwrite the defaults with your values.
+
+# In seconds
+SIM_LENGTH = 70
+
+# 0 for real time, i.e., exactly the number of seconds
+# 1 for simulation time, i.e., time is measured by ticks (simulation will last for SIM_LENGTH * TICK_HZ ticks
+TIME_LENGTH_TYPE = 1
+
+TICK_HZ = 60
+
+# Should the simulation run in real time, or wait for the agent to provide commands, realtime or lockstep respectively
+# If using lockstep, command results are returned after the ticking the world, this might interfere with agents that
+# will wait for the results inside get_next_commands()
+# If using lockstep and gui, gui will not display "day/night" cycle due to flashing lights
+# 0 for real time
+# 1 for lockstep
+RT_OR_LOCK_STEP = 1
+
+# Should none/some/all tasks have deadlines?
+# 0: none, all: 1, some: Chance for task to have a deadline
+TASK_DEADLINE_PROBABILITY = 0
+
+# Non-deterministic Actions
+# This decides an action can fail when attempted. "Instant" actions that fail will simply not have any affect
+# Failing on travelling will require the actor to return to the node it started at. It cannot fail returning and is
+# guaranteed to do so. Failing on digging will have all actors digging at the mine become idle and all progress on the
+# mine reset. If building fails, then some progress and resources will be lost
+
+# There is also a separate modifier for constructing and mining actions that have a different chance of failure upon
+# completion of the task. These have the same affects as described above
+
+TRAVEL_NON_DETERMINISTIC = 0
+DIGGING_NON_DETERMINISTIC = 0
+CONSTRUCTION_NON_DETERMINISTIC = 0
+
+DIGGING_COMPLETION_NON_DETERMINISTIC = 0
+CONSTRUCTION_COMPLETION_NON_DETERMINISTIC = 0
+
+PICK_UP_NON_DETERMINISTIC = 0
+DROP_NON_DETERMINISTIC = 0
+SITE_CREATION_NON_DETERMINISTIC = 0
+DEPOSIT_NON_DETERMINISTIC = 0
+
+# Temporal Uncertainty
+# "On-going" actions (travelling, mining, constructing) take time to complete. By setting these actions to be temporally
+# uncertain, they can take different amounts of time each time they are performed, even if conditions are the same.
+# This is simulated by having the "progress" made each tick by the actor(s) have an amount of standard deviation.
+
+TRAVEL_TU = 0
+DIGGING_TU = 0
+CONSTRUCTING_TU = 0
+
+# Partial observability
+# Instead of the entire world being visible by the agent, only what is seen by the actors is visible. An actor can see
+# in two ways. The first is passive sight, where an actor can see all entities the actor is at.
+
+ACTOR_PO = 0
+NODE_PO = 0
+EDGE_PO = 0
+RESOURCE_PO = 0
+MINE_PO = 0
+SITE_PO = 0
+BUILDING_PO = 0
+TASK_PO = 0
+
+# Limited Communication
+# When limited communication is set, each actor can only knows about fully observable entities and any partially
+# observable entities it alone can see. Each actor is assigned a unique agent.
+
+LIMITED_COMMUNICATIONS = 0
