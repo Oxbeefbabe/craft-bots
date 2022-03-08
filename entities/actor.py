@@ -175,7 +175,7 @@ class Actor:
         :return: True if successful and False otherwise
         """
         if self.state == Actor.IDLE:
-            for resource in self.resources:
+            for resource in self.resources[:]:
                 self.drop_resource(resource)
             return True
         return False
