@@ -3,6 +3,7 @@ import random
 
 from api import agent_api
 
+INVENTORY_SIZE = 3
 
 class Basic_RBA:
     def __init__(self, api, world_info):
@@ -105,8 +106,8 @@ class Actor_Info:
                        self.api.get_field(current_node, "resources")))
 
             mine_tracker = list(filter(lambda mine: mine["actors"].__contains__(self.id), self.master.active_mines))[0]
-            if len(viable_resources) >= mine_tracker["target_amount"]:
-                resource_amount = self.api.get_field(self.task, "needed_resources")[target_colour]
+            if len(viable_resources) >= sum(list(map(lambda amount_tracker: amount_tracker[1] ,mine_tracker["target_amount"]))):
+                resource_amount = list(filter(lambda amount_tracker: amount_tracker[0] == self.id ,mine_tracker["target_amount"]))[0][1]
                 self.say(
                     f"{len(viable_resources)} {self.resource_colour[target_colour]} resources collected, of which I need {resource_amount}. Picking up now.", True)
                 self.api.cancel_action(self.id)
@@ -199,6 +200,17 @@ class Actor_Info:
             # print(self.api.get_by_id(self.task))
             self.say(f"Building at site {site}")
             self.push(self.api.construct_at, site)
+
+            needed_resources = self.api.get_field(self.task, "needed_resources")[:]
+            for resource in self.api.get_field(self.id, "resources"):
+                needed_resources[self.api.get_field(resource,"colour")] -= 1
+
+            for resource in self.api.get_field(self.api.get_field(self.id, "node"), "resources"):
+                if needed_resources[self.api.get_field(resource,"colour")] > 0:
+                    self.push(self.api.deposit_resources, site, resource, to_front=True)
+                    self.push(self.api.pick_up_resource, resource, to_front=True)
+                    needed_resources[self.api.get_field(resource, "colour")] -= 1
+
             for resource in self.api.get_field(self.id, "resources"):
                 self.say(f"Depositing resource {resource} into site {site}", True)
                 self.push(self.api.deposit_resources, site, resource, to_front=True)
@@ -284,6 +296,34 @@ class Actor_Info:
     def dig_for_resource(self, colour, amount, target_mine = None):
         # Save the current node id for future reference
         current_node = self.api.get_field(self.id, "node")
+        inventory = self.api.get_field(self.id, "resources")
+
+        #If I'm currently holding a black resource
+        if 3 in list(map(lambda resource: self.api.get_field(resource, "colour"), self.api.get_field(self.id, "resources"))):
+            self.push(self.dig_for_resource, colour, amount, include_actor=False, to_front=True)
+            self.push(self.api.drop_all_resources, to_front=True)
+            self.go_to(self.api.get_field(self.task, "node"), now=True)
+            return
+
+        #If I do not have the space for the resources I need
+        current_amount = amount
+        if len(inventory) + current_amount > INVENTORY_SIZE or colour == 3:
+            current_amount = (INVENTORY_SIZE - len(inventory)) if not colour == 3 else 1 if not len(inventory) else 0
+            later_amount = max(amount - current_amount,0)
+            if current_amount <= 0:
+                self.push(self.dig_for_resource, colour, amount, include_actor=False, to_front=True)
+                self.push(self.api.drop_all_resources, to_front=True)
+                self.go_to(self.api.get_field(self.task, "node"), now=True)
+                self.say(
+                    f"My inventory is full. I'll drop off what I have and get {amount} later",
+                    now=True)
+            else:
+                if later_amount:
+                    self.push(self.dig_for_resource, colour, later_amount, include_actor=False, to_front=True)
+                self.push(self.api.drop_all_resources, to_front=True)
+                self.go_to(self.api.get_field(self.task, "node"), now=True)
+                self.say(f"I don't have enough space for the {amount} resources I need. I'll get {current_amount} later", now=True)
+
 
         if colour == 2:
             # Deal with orange resource
@@ -294,14 +334,14 @@ class Actor_Info:
                 self.push(self.api.dig_at, closest_mine["mine_id"], to_front=True)
                 self.go_to(closest_mine["mine_node"], current_node, now=True)
                 closest_mine["actors"].append(self.id)
-                closest_mine["target_amount"] += amount
+                closest_mine["target_amount"].append((self.id, current_amount))
                 return
             else:
                 mine, mine_node, _ = self.find_mine(self.api.get_field(self.id, "node"), colour)
                 self.push(self.api.dig_at, mine, to_front=True)
                 self.go_to(mine_node, current_node, now=True)
                 self.master.active_mines.append(
-                    {"mine_id": target_mine, "mine_node": mine_node, "target_amount": amount, "colour": colour,
+                    {"mine_id": target_mine, "mine_node": mine_node, "target_amount": [(self.id, current_amount)], "colour": colour,
                      "actors": [self.id]})
                 return
         else:
@@ -315,7 +355,7 @@ class Actor_Info:
             # If the mine needed does not exist, go to closest mine and then do this
             if target_mine is None:
                 mine, mine_node, _ = self.find_mine(self.api.get_field(self.id, "node"), colour)
-                self.push(self.dig_for_resource, colour, amount, mine, to_front=True, include_actor=False)
+                self.push(self.dig_for_resource, colour, current_amount, mine, to_front=True, include_actor=False)
                 self.go_to(mine_node, current_node, now=True)
                 return
 
@@ -324,10 +364,10 @@ class Actor_Info:
             if active_mine["mine_id"] == target_mine:
                 # Squeeze in
                 active_mine["actors"].append(self.id)
-                active_mine["target_amount"] += amount
+                active_mine["target_amount"].append((self.id, current_amount))
                 self.api.dig_at(self.id, target_mine)
                 return
 
         # Otherwise let other actors know you are here
-        self.master.active_mines.append({"mine_id": target_mine, "mine_node": current_node, "target_amount": amount, "colour": colour, "actors":[self.id]})
+        self.master.active_mines.append({"mine_id": target_mine, "mine_node": current_node, "target_amount": [(self.id, current_amount)], "colour": colour, "actors":[self.id]})
         self.api.dig_at(self.id, target_mine)
