@@ -105,7 +105,13 @@ class Actor_Info:
                 filter(lambda resource_id: self.api.get_field(resource_id, "colour") == target_colour,
                        self.api.get_field(current_node, "resources")))
 
-            mine_tracker = list(filter(lambda mine: mine["actors"].__contains__(self.id), self.master.active_mines))[0]
+            mine_tracker = list(filter(lambda mine: mine["actors"].__contains__(self.id), self.master.active_mines))
+
+            if mine_tracker:
+                mine_tracker = mine_tracker[0]
+            else:
+                return
+
             if len(viable_resources) >= sum(list(map(lambda amount_tracker: amount_tracker[1] ,mine_tracker["target_amount"]))):
                 resource_amount = list(filter(lambda amount_tracker: amount_tracker[0] == self.id ,mine_tracker["target_amount"]))[0][1]
                 self.say(
