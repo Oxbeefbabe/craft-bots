@@ -48,6 +48,17 @@ def run_taa():
                                       rule_file="craftbots/initialisation_files/eval/simple_small/rules"
                                       ))
 
+def run_pa():
+    from agents import planning_agent
+    from craftbots import craft_bots
+
+    print(craft_bots.start_simulation(agent_class=planning_agent.PlanningAgent,
+                                      use_gui=True,
+                                      modifier_file="craftbots/initialisation_files/simple_modifiers",
+                                      world_modifier_file="craftbots/initialisation_files/simple_world_gen_modifiers",
+                                      rule_file="craftbots/initialisation_files/simple_rules"
+                                      ))
+
 
 if __name__ == '__main__':
-    run_taa()
+    run_pa()
