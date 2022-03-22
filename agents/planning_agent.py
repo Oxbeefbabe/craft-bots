@@ -126,6 +126,8 @@ class PlanningAgent:
     def predict_outcome(self, info, command=None):
         new_info = deepcopy(info)
         new_info["tick"] = new_info["tick"] + 1
+        if command is not None:
+            new_info["commands"][self.get_next_id(new_info)] = command
 
         for actor_id in new_info["actors"]:
             current_node = new_info["actors"][actor_id]["node"]
@@ -163,7 +165,7 @@ class PlanningAgent:
             elif new_info["actors"][actor_id]["state"] == self.CONSTRUCTING:
                 target = new_info["actors"][actor_id]["target"]
                 max_progress = self.BUILD_EFFORT * sum(new_info["sites"][target]["deposited_resources"])
-                new_info["sites"][target]["progress"] = max(self.BUILD_SPEED + new_info["sites"][target]["progress"], max_progress)
+                new_info["sites"][target]["progress"] = min(self.BUILD_SPEED + new_info["sites"][target]["progress"], max_progress)
 
                 if new_info["sites"][target]["progress"] >= self.BUILD_EFFORT * sum(new_info["sites"][target]["needed_resources"]):
                     new_building_id = self.get_next_id(new_info)
@@ -181,6 +183,12 @@ class PlanningAgent:
                     new_info["tasks"][new_info["sites"][target]["task"]]["project"] = new_building_id
                     new_info["nodes"][current_node]["sites"].remove(target)
                     new_info["sites"].pop(target)
+
+                elif new_info["sites"][target]["progress"] == max_progress:
+                    for building_actor in new_info["actors"]:
+                        if new_info["actors"][building_actor]["target"] == target:
+                            new_info["actors"][building_actor]["target"] = None
+                            new_info["actors"][building_actor]["state"] = self.IDLE
 
         if command is not None:
             current_node = new_info["actors"][command[0]]["node"]
@@ -266,7 +274,7 @@ class PlanningAgent:
         while queue:
             c += 1
             current_state = queue.pop()
-            if c % 1 == 0 and c > 1:
+            if c % 10 == 0 and c > 1:
                 print(f"States checked: {c}, Current heuristic: {current_state.score}, Last command : {current_state.path[-1]} ,Tick: {current_state.info['tick']}, True Score: {current_state.true_score()}, Queue length: {len(queue)}")
             if current_state.finished():
                 print(f"Checked {c} different states to get plan")
