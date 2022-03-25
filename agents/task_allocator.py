@@ -6,7 +6,7 @@ DEBUG = 5
 INVENTORY_SPACE = 3
 GREEN_DECAY_TIME = 200
 ACTOR_MOVE_SPEED = 1
-BLACK_HEAVY = False
+BLACK_HEAVY = True
 
 
 class TaskAllocator:
@@ -64,7 +64,11 @@ class TaskAllocator:
         for task in tasks.values():
             for i, n in enumerate(task["needed_resources"]):
                 if n:
-                    goals.append(Goal(self.get_goal_id(), Goal.DIG, [n, i], task["id"]))
+                    if i == 2:
+                        goals.append(Goal(self.get_goal_id(), Goal.DIG, [n - n//2, i], task["id"]))
+                        goals.append(Goal(self.get_goal_id(), Goal.DIG, [n//2, i], task["id"]))
+                    else:
+                        goals.append(Goal(self.get_goal_id(), Goal.DIG, [n, i], task["id"]))
 
             for i, n in enumerate(task["needed_resources"]):
                 if n:
@@ -154,7 +158,7 @@ class ActorController:
             target_colour = self.api.get_field(self.api.get_field(self.id, "target"), "colour")
             viable_resources = list(
                 filter(lambda resource_id: self.api.get_field(resource_id,
-                                                              "colour") == target_colour and not resource_id in self.master.reserved_resources,
+                                                              "colour") == target_colour and (( resource_id not in self.master.reserved_resources) or self.master.reserved_resources[resource_id][0] == self.current_goal.task),
                        self.api.get_field(current_node, "resources")))
 
             mine_tracker = list(filter(lambda mine: mine["actors"].__contains__(self.id), self.master.active_mines))
@@ -553,7 +557,7 @@ class ActorController:
                 self.set_target(None)
                 self.push(self.api.dig_at, mine)
                 self.master.active_mines.append(
-                    {"mine_id": target_mine, "mine_node": mine_node, "target_amount": amount, "colour": colour,
+                    {"mine_id": mine, "mine_node": mine_node, "target_amount": amount, "colour": colour,
                      "actors": [self.id]})
                 return
         else:
@@ -566,14 +570,6 @@ class ActorController:
 
             # If the mine needed does not exist, go to closest mine and then do this
             if target_mine is None:
-                """
-                if colour == 4:
-                    mine, mine_node, path_length = self.find_mine(self.api.get_field(self.current_goal.task, "node"), colour)
-                    if path_length * ACTOR_MOVE_SPEED >= GREEN_DECAY_TIME:
-                        self.say(f"Error: not possible to bring green resources to this task {self.current_goal.task} in time.")
-                        self.forget_task()
-                else:
-                """
                 mine, mine_node, path_length = self.find_mine(self.api.get_field(self.id, "node"), colour)
                 self.set_target(mine_node)
                 self.go_to(mine_node, current_node)
