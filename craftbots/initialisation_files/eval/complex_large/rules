@@ -1,7 +1,7 @@
 # Craftbots will overwrite the defaults with your values.
 
 # In seconds
-SIM_LENGTH = 70
+SIM_LENGTH = 300
 
 # 0 for real time, i.e., exactly the number of seconds
 # 1 for simulation time, i.e., time is measured by ticks (simulation will last for SIM_LENGTH * TICK_HZ ticks
