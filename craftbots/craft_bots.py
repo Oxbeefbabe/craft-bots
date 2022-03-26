@@ -85,7 +85,7 @@ def default_scenario(modifiers, world_gen_modifiers):
                 world.add_site(world.nodes[r.randint(0, world.nodes.__len__() - 1)], building_type)
 
 
-def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scenario,modifier_file=None,world_modifier_file=None,rule_file=None, refresh_sim_on_end=False):
+def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scenario,modifier_file=None,world_modifier_file=None,rule_file=None, refresh_sim_on_end=False, seed = None):
     """
         The command used to start the CraftBots simulation. The simulation will run on a separate thread and the current
         thread will wait for the simulation to finish and return the score achieved.
@@ -102,7 +102,7 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
     if refresh_sim_on_end:
         while not kill_switch:
             sim_thread = threading.Thread(target=prep_simulation, args=(
-                agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
+                agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file, seed), daemon=True)
             sim_thread.start()
             sim_stopped = False
             refresh = True
@@ -114,7 +114,7 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
         return results
     else:
         start_time = time.perf_counter()
-        sim_thread = threading.Thread(target=prep_simulation, args=(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file), daemon=True)
+        sim_thread = threading.Thread(target=prep_simulation, args=(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file, seed), daemon=True)
         sim_thread.start()
         sim_stopped = False
         while not sim_stopped:
@@ -126,11 +126,13 @@ def start_simulation(agent_class=BlankAgent, use_gui=True, scenario=default_scen
         return get_results()
 
 
-def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file):
+def prep_simulation(agent_class, use_gui, scenario, modifier_file, world_modifier_file, rule_file, seed):
     global world, view, gui, gui_initialised
     world_gen_modifiers = get_world_gen_modifiers(world_modifier_file)
     modifiers = get_modifiers(modifier_file)
     rules = get_rules(rule_file)
+    if seed is not None:
+        world_gen_modifiers["RANDOM_SEED"] = seed
     world = World(modifiers, world_gen_modifiers, rules)
     scenario(modifiers, world_gen_modifiers)
 

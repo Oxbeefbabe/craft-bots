@@ -57,14 +57,15 @@ def run_evaluator(agents, epochs, modifiers_path, rules_path, world_gen_path, ru
 
     for _ in range(epochs):
 
-        if share_seeds: set_seed(world_gen_path)
+        seed = int(time.time())
 
         for index, agent in enumerate(agents):
             results[agent_names[index]].append(craft_bots.start_simulation(agent_class=agent,
                                     use_gui=gui, # Set to False to allow for simulation to be run in the background
                                     modifier_file=modifiers_path,
                                     world_modifier_file=world_gen_path,
-                                    rule_file=rules_path))
+                                    rule_file=rules_path,
+                                    seed = seed))
             write_results(results[agent_names[index]][-1], rule_set_name, agent_names[index])
     return results
 
